@@ -8,6 +8,6 @@ public class Rotate : MonoBehaviour {
     public float speed = 1.0f;
     // Update is called once per frame
     void Update() {
-        this.transform.Rotate(new Vector3(0.0f, speed * Time.deltaTime, 0.0f));
+        this.transform.Rotate(0.0f, speed * Time.deltaTime, 0.0f, Space.World);
     }
 }

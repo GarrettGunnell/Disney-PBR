@@ -5,11 +5,12 @@ Shader "Acerola/BlinnPhong" {
         _NormalTex ("Normal", 2D) = "" {}
         _NormalStrength ("Normal Strength", Range(0.0, 3.0)) = 1.0
         _ShininessTex ("Shininess", 2D) = "" {}
-        _DirectSpecularPeak ("Specular Peak", Range(0.0, 100.0)) = 20.0
+        _DirectSpecularPeak ("Specular Peak", Range(0.0, 200.0)) = 20.0
         _SpecularStrength ("Specular Strength", Range(0.0, 2.0)) = 1.0
         _F0 ("Direct Fresnel", Range(0.0, 2.0)) = 0.028
         _SkyboxCube ("Skybox", Cube) = "" {}
         _IndirectSpecularPeak ("Indirect Specular Peak", Range(0.0, 100.0)) = 20.0
+        _IndirectSpecularStrength ("Indirect Specular Strength", Range(0.0, 2.0)) = 1.0
         _F1 ("Indirect Fresnel", Range(0.0, 2.0)) = 0.028
     }
 
@@ -33,7 +34,7 @@ Shader "Acerola/BlinnPhong" {
 
             sampler2D _AlbedoTex, _NormalTex, _ShininessTex;
             samplerCUBE _SkyboxCube;
-            float _NormalStrength, _DirectSpecularPeak, _IndirectSpecularPeak, _SpecularStrength, _F0, _F1;
+            float _NormalStrength, _DirectSpecularPeak, _IndirectSpecularPeak, _SpecularStrength, _IndirectSpecularStrength, _F0, _F1;
 
             struct VertexData {
                 float4 vertex : POSITION;
@@ -87,9 +88,9 @@ Shader "Acerola/BlinnPhong" {
 
                 float base = 1 - dot(viewDir, halfwayDir);
                 float exponential = pow(base, 5.0f);
-                float fresnel = exponential + _F0 * (1.0f - exponential);
+                float fresnel = exponential + (_F0) * (1.0f - exponential);
 
-                float shininess = saturate(tex2D(_ShininessTex, uv).r);
+                float shininess = saturate(tex2D(_ShininessTex, uv).r * 2.0f);
                 float spec = pow(DotClamped(normal, halfwayDir), _DirectSpecularPeak) * shininess;
                 spec *= fresnel;
 
@@ -99,10 +100,10 @@ Shader "Acerola/BlinnPhong" {
 
                 float3 indirectDiffuse = albedo * texCUBElod(_SkyboxCube, float4(normal, 5)).rgb * 1.0f;
 
-                float indirectSpec = pow(DotClamped(normal, normalize(normal - viewDir)), _IndirectSpecularPeak) * shininess;
+                float indirectSpec = pow(DotClamped(normal, normalize(normal - viewDir)), _IndirectSpecularPeak) * (shininess);
                 float indirectFresnel = exponential + _F1 * (1.0f - exponential);
 
-                float3 indirectSpecular = texCUBElod(_SkyboxCube, float4(reflectedDir, 0)).rgb * indirectFresnel * indirectSpec;
+                float3 indirectSpecular = texCUBElod(_SkyboxCube, float4(reflectedDir, 0)).rgb * indirectFresnel * indirectSpec * _IndirectSpecularStrength;
                 float3 indirectLight = indirectDiffuse + indirectSpecular;
 
                 return float4(directLight + indirectLight, 1.0f);
