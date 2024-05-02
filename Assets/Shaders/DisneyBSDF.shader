@@ -58,6 +58,10 @@ Shader "Acerola/Disney" {
                 return i;
             }
 
+            float SchlickFresnel(float x) {
+                return pow(saturate(1 - x), 5);
+            }
+
             float4 fp(v2f i) : SV_TARGET {
                 float2 uv = i.uv;
                 float3 albedo = tex2D(_AlbedoTex, uv).rgb;
@@ -80,16 +84,29 @@ Shader "Acerola/Disney" {
                 float ndotv = DotClamped(N, V);
                 float ndoth = DotClamped(N, H);
                 float ldoth = DotClamped(L, H);
+                float vdoth = DotClamped(V, H);
 
                 float FD90 = 0.5f + 2.0f * _Roughness * ldoth * ldoth;
 
-                float F = (1.0f + (FD90 - 1.0f) * pow(1.0f - ndotl, 5.0f)) * (1.0f + (FD90 - 1.0f) * pow(1.0f - ndotv, 5.0f));
+                float F = lerp(1.0f, FD90, SchlickFresnel(ndotl)) * lerp(1.0f, FD90, SchlickFresnel(ndotv));
 
                 float3 diffuse = (albedo / PI) * F;
 
+                // Distribution
+
+                float alpha = _Roughness * _Roughness;
+
+                float GTRdenom = 1.0f + (alpha * alpha - 1) * ndoth * ndoth;
+                float GTR = (alpha * alpha) / (PI * GTRdenom * GTRdenom);
+
+                float F0 = 0.1f;
+                float Fspec = lerp(F0, 1.0f, SchlickFresnel(ldoth));
+
+                return Fspec;
+
                 float shadow = SHADOW_ATTENUATION(i);
 
-                float3 output = diffuse * ndotl;
+                float3 output = diffuse * ndotl * shadow;
 
                 return float4(output, 1.0f);
             }
