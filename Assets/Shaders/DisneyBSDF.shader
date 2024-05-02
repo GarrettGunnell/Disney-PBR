@@ -4,6 +4,7 @@ Shader "Acerola/Disney" {
         _AlbedoTex ("Albedo", 2D) = "" {}
         _NormalTex ("Normal", 2D) = "" {}
         _NormalStrength ("Normal Strength", Range(0.0, 3.0)) = 1.0
+        _Roughness ("Roughness", Range(0.0, 1.0)) = 0.4
     }
 
     SubShader {
@@ -24,8 +25,10 @@ Shader "Acerola/Disney" {
             #include "UnityPBSLighting.cginc"
             #include "AutoLight.cginc"
 
+            #define PI 3.14159265f
+
             sampler2D _AlbedoTex, _NormalTex;
-            float _NormalStrength;
+            float _NormalStrength, _Roughness;
 
             struct VertexData {
                 float4 vertex : POSITION;
@@ -68,13 +71,25 @@ Shader "Acerola/Disney" {
                 float3 binormal = cross(i.normal, i.tangent.xyz) * i.tangent.w * unity_WorldTransformParams.w;
                 N = normalize(tangentSpaceNormal.x * i.tangent + tangentSpaceNormal.y * binormal + tangentSpaceNormal.z * i.normal);
 
-                float3 L = _WorldSpaceLightPos0.xyz;
+                float3 L = _WorldSpaceLightPos0.xyz; // Direction to light source
+                float3 V = normalize(_WorldSpaceCameraPos.xyz - i.worldPos.xyz); // Direction to camera
+                float3 H = normalize(L + V); // Microfacet normal of perfect reflection
+                float3 R = normalize(reflect(-V, N)); // Direction of reflection across normal from viewer
 
                 float ndotl = DotClamped(N, L);
+                float ndotv = DotClamped(N, V);
+                float ndoth = DotClamped(N, H);
+                float ldoth = DotClamped(L, H);
+
+                float FD90 = 0.5f + 2.0f * _Roughness * ldoth * ldoth;
+
+                float F = (1.0f + (FD90 - 1.0f) * pow(1.0f - ndotl, 5.0f)) * (1.0f + (FD90 - 1.0f) * pow(1.0f - ndotv, 5.0f));
+
+                float3 diffuse = (albedo / PI) * F;
 
                 float shadow = SHADOW_ATTENUATION(i);
 
-                float3 output = albedo * ndotl * shadow;
+                float3 output = diffuse * ndotl;
 
                 return float4(output, 1.0f);
             }
