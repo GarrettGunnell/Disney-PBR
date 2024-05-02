@@ -1,4 +1,4 @@
-Shader "Acerola/LambertianDiffuse" {
+Shader "Acerola/Disney" {
 
     Properties {
         _AlbedoTex ("Albedo", 2D) = "" {}
@@ -57,26 +57,26 @@ Shader "Acerola/LambertianDiffuse" {
 
             float4 fp(v2f i) : SV_TARGET {
                 float2 uv = i.uv;
-                float3 col = tex2D(_AlbedoTex, uv).rgb;
+                float3 albedo = tex2D(_AlbedoTex, uv).rgb;
                 
                 // Unpack DXT5nm tangent space normal
-                float3 normal;
-                normal.xy = tex2D(_NormalTex, uv).wy * 2 - 1;
-                normal.xy *= _NormalStrength;
-                normal.z = sqrt(1 - saturate(dot(normal.xy, normal.xy)));
-                float3 tangentSpaceNormal = normal;
+                float3 N;
+                N.xy = tex2D(_NormalTex, uv).wy * 2 - 1;
+                N.xy *= _NormalStrength;
+                N.z = sqrt(1 - saturate(dot(N.xy, N.xy)));
+                float3 tangentSpaceNormal = N;
                 float3 binormal = cross(i.normal, i.tangent.xyz) * i.tangent.w * unity_WorldTransformParams.w;
-                normal = normalize(tangentSpaceNormal.x * i.tangent + tangentSpaceNormal.y * binormal + tangentSpaceNormal.z * i.normal);
+                N = normalize(tangentSpaceNormal.x * i.tangent + tangentSpaceNormal.y * binormal + tangentSpaceNormal.z * i.normal);
 
-                float ndotl = DotClamped(_WorldSpaceLightPos0.xyz, normal);
+                float3 L = _WorldSpaceLightPos0.xyz;
+
+                float ndotl = DotClamped(N, L);
 
                 float shadow = SHADOW_ATTENUATION(i);
 
-                float ndotl2 = DotClamped(normalize(float3(1, -1, 0.15)), normal);
+                float3 output = albedo * ndotl * shadow;
 
-
-
-                return float4(col * ndotl * shadow * float3(1.10f, 0.95f, 0.75f) + ndotl2 * col * 0.5f * float3(0.75f, 1.0f, 0.75f), 1.0f);
+                return float4(output, 1.0f);
             }
 
             ENDCG

@@ -1,9 +1,11 @@
-Shader "Acerola/BlinnPhong" {
+Shader "Acerola/BlinnPhongToon" {
 
     Properties {
         _AlbedoTex ("Albedo", 2D) = "" {}
         _NormalTex ("Normal", 2D) = "" {}
         _NormalStrength ("Normal Strength", Range(0.0, 3.0)) = 1.0
+        _NormalQuantization ("Normal Quantization", Integer) = 4
+        _NormalDitherSpread ("Normal Dither Spread", Range(0.0, 3.0)) = 0.5
         _ShininessTex ("Shininess", 2D) = "" {}
         _DirectSpecularPeak ("Specular Peak", Range(0.0, 200.0)) = 20.0
         _SpecularStrength ("Specular Strength", Range(0.0, 2.0)) = 1.0
@@ -35,6 +37,8 @@ Shader "Acerola/BlinnPhong" {
             sampler2D _AlbedoTex, _NormalTex, _ShininessTex;
             samplerCUBE _SkyboxCube;
             float _NormalStrength, _DirectSpecularPeak, _IndirectSpecularPeak, _SpecularStrength, _IndirectSpecularStrength, _F0, _F1;
+            float _NormalDitherSpread;
+            int _NormalQuantization;
 
             struct VertexData {
                 float4 vertex : POSITION;
@@ -64,9 +68,22 @@ Shader "Acerola/BlinnPhong" {
                 return i;
             }
 
+            static const int bayer4[4 * 4] = {
+                0, 8, 2, 10,
+                12, 4, 14, 6,
+                3, 11, 1, 9,
+                15, 7, 13, 5
+            };
+
             float4 fp(v2f i) : SV_TARGET {
                 float2 uv = i.uv;
-                float3 albedo = tex2D(_AlbedoTex, uv).rgb;
+                float3 albedo = saturate(tex2D(_AlbedoTex, uv).rgb);
+                
+                int x = i.pos.x;
+                int y = i.pos.y;
+
+                float bayer = float(bayer4[(x % uint(4)) + (y % uint(4)) * 4]) * (1.0f / 16.0f) - 0.5f;
+                
                 
                 // Unpack DXT5nm tangent space normal
                 float3 normal;
@@ -77,10 +94,15 @@ Shader "Acerola/BlinnPhong" {
                 float3 binormal = cross(i.normal, i.tangent.xyz) * i.tangent.w * unity_WorldTransformParams.w;
                 normal = normalize(tangentSpaceNormal.x * i.tangent + tangentSpaceNormal.y * binormal + tangentSpaceNormal.z * i.normal);
 
-                float3 ndotl = _LightColor0 * DotClamped(_WorldSpaceLightPos0.xyz, normal);
+                float3 quantizedNormal = normal * 0.5f + 0.5f;
+                quantizedNormal = quantizedNormal + _NormalDitherSpread * bayer;
+                quantizedNormal = floor((_NormalQuantization - 1) * quantizedNormal + 0.5) / (_NormalQuantization - 1);
+                quantizedNormal = normalize(quantizedNormal * 2 - 1);
+
+                float3 ndotl = saturate(_LightColor0 * DotClamped(_WorldSpaceLightPos0.xyz, quantizedNormal));
 
                 float shadow = SHADOW_ATTENUATION(i);
-
+                
                 float3 lightDir = normalize(_WorldSpaceLightPos0 - i.worldPos);
                 float3 viewDir = normalize(_WorldSpaceCameraPos - i.worldPos);
                 float3 halfwayDir = normalize(_WorldSpaceLightPos0 + viewDir);
@@ -94,19 +116,26 @@ Shader "Acerola/BlinnPhong" {
                 float spec = pow(DotClamped(normal, halfwayDir), _DirectSpecularPeak) * shininess;
                 spec *= fresnel;
 
+                float thresholdedSpec = (spec + 0.1f * bayer) > 0.85f ? 1.0f : 0.0f;
+
                 float3 directDiffuse = albedo;
-                float3 directSpecular = _LightColor0 * saturate(spec * _SpecularStrength);
+                float3 directSpecular = _LightColor0 * saturate(thresholdedSpec * _SpecularStrength);
                 float3 directLight = (directDiffuse + directSpecular) * ndotl * shadow;
+
 
                 float3 indirectDiffuse = albedo * texCUBElod(_SkyboxCube, float4(normal, 5)).rgb * 1.0f;
 
                 float indirectSpec = pow(DotClamped(normal, normalize(normal - viewDir)), _IndirectSpecularPeak) * (shininess);
+
+                indirectSpec = (indirectSpec + 0.05f * bayer) > 0.25f ? 1.0f : 0.0f;
                 float indirectFresnel = exponential + _F1 * (1.0f - exponential);
 
-                float3 indirectSpecular = texCUBElod(_SkyboxCube, float4(reflectedDir, 0)).rgb * indirectFresnel * indirectSpec * _IndirectSpecularStrength;
+                float3 indirectSpecular = texCUBElod(_SkyboxCube, float4(reflectedDir, 2)).rgb * indirectFresnel * indirectSpec * _IndirectSpecularStrength;
                 float3 indirectLight = indirectDiffuse + indirectSpecular;
 
-                return float4(directLight + indirectLight, 1.0f);
+                indirectLight = indirectDiffuse + indirectSpecular;
+
+                return float4(directLight * 2 + indirectLight * 2, 1.0f);
             }
 
             ENDCG
