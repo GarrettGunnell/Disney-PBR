@@ -4,7 +4,16 @@ Shader "Acerola/Disney" {
         _AlbedoTex ("Albedo", 2D) = "" {}
         _NormalTex ("Normal", 2D) = "" {}
         _NormalStrength ("Normal Strength", Range(0.0, 3.0)) = 1.0
-        _Roughness ("Roughness", Range(0.0, 1.0)) = 0.4
+        _Metallic ("Metallic", Range(0.0, 1.0)) = 0
+        _Subsurface ("Subsurface", Range(0.0, 1.0)) = 0
+        _Specular ("Specular", Range(0.0, 1.0)) = 0.5
+        _Roughness ("Roughness", Range(0.0, 1.0)) = 0.5
+        _SpecularTint ("Specular Tint", Range(0.0, 1.0)) = 0.0
+        _Anisotropic ("Anisotropic", Range(0.0, 1.0)) = 0.0
+        _Sheen ("Sheen", Range(0.0, 1.0)) = 0.0
+        _SheenTint ("Sheen Tint", Range(0.0, 1.0)) = 0.5
+        _ClearCoat ("Clear Coat", Range(0.0, 1.0)) = 0.0
+        _ClearCoatGloss ("Clear Coat Gloss", Range(0.0, 1.0)) = 1.0
     }
 
     SubShader {
@@ -28,7 +37,7 @@ Shader "Acerola/Disney" {
             #define PI 3.14159265f
 
             sampler2D _AlbedoTex, _NormalTex;
-            float _NormalStrength, _Roughness;
+            float _NormalStrength, _Roughness, _Metallic, _Subsurface, _Specular, _SpecularTint, _Anisotropic, _Sheen, _SheenTint, _ClearCoat, _ClearCoatGloss;
 
             struct VertexData {
                 float4 vertex : POSITION;
@@ -99,10 +108,8 @@ Shader "Acerola/Disney" {
                 float GTRdenom = 1.0f + (alpha * alpha - 1) * ndoth * ndoth;
                 float GTR = (alpha * alpha) / (PI * GTRdenom * GTRdenom);
 
-                float F0 = 0.1f;
+                float F0 = 0.0f;
                 float Fspec = lerp(F0, 1.0f, SchlickFresnel(ldoth));
-
-                return Fspec;
 
                 float shadow = SHADOW_ATTENUATION(i);
 
