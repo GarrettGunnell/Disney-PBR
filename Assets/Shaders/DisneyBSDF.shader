@@ -55,6 +55,14 @@ Shader "Acerola/Disney" {
                 SHADOW_COORDS(4)
             };
 
+            float luminance(float3 color) {
+                return dot(color, float3(0.299f, 0.587f, 0.114f));
+            }
+
+            float SchlickFresnel(float x) {
+                return pow(saturate(1 - x), 5);
+            }
+
             v2f vp(VertexData v) {
                 v2f i;
                 i.pos = UnityObjectToClipPos(v.vertex);
@@ -65,10 +73,6 @@ Shader "Acerola/Disney" {
                 TRANSFER_SHADOW(i);
 
                 return i;
-            }
-
-            float SchlickFresnel(float x) {
-                return pow(saturate(1 - x), 5);
             }
 
             float4 fp(v2f i) : SV_TARGET {
@@ -95,11 +99,23 @@ Shader "Acerola/Disney" {
                 float ldoth = DotClamped(L, H);
                 float vdoth = DotClamped(V, H);
 
+                float FL = SchlickFresnel(ndotl);
+                float FV = SchlickFresnel(ndotv);
+
+                // Diffuse Reflectance
+                
                 float FD90 = 0.5f + 2.0f * _Roughness * ldoth * ldoth;
 
-                float F = lerp(1.0f, FD90, SchlickFresnel(ndotl)) * lerp(1.0f, FD90, SchlickFresnel(ndotv));
+                float F = lerp(1.0f, FD90, FL) * lerp(1.0f, FD90, FV);
 
                 float3 diffuse = (albedo / PI) * F;
+
+                // Diffuse Subsurface Scattering Approximation
+
+                float Fss90 = ldoth * ldoth * _Roughness;
+                float Fss = lerp(1.0f, Fss90, FL) * lerp(1.0f, Fss90, FV);
+                float ss = 1.25f * (Fss * (rcp(ndotl + ndotv) - 0.5f) + 0.5f);
+
 
                 // Distribution
 
