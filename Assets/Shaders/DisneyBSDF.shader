@@ -75,6 +75,12 @@ Shader "Acerola/Disney" {
                 return alphaSquared / (PI * b * b);
             }
 
+            float GTR1(float ndoth, float a) {
+                float a2 = a * a;
+                float t = 1.0f + (a2 - 1.0f) * ndoth * ndoth;
+                return (a2 - 1.0f) / (PI * log(a2) * t);
+            }
+
             float AnisotropicGTR2(float ndoth, float hdotx, float hdoty, float ax, float ay) {
                 return rcp(PI * ax * ay * sqr(sqr(hdotx / ax) + sqr(hdoty / ay) + sqr(ndoth)));
             }
@@ -173,9 +179,12 @@ Shader "Acerola/Disney" {
                 // Sheen
                 float3 Fsheen = FH * _Sheen * 1.0f;
 
+                // Clearcoat (Hard Coded Index Of Refraction -> 1.5f -> F0 -> 0.04)
+                float Dr = GTR1(ndoth, lerp(0.1f, 0.001f, _ClearCoatGloss)); // Normalized Isotropic GTR Gamma == 1
+                float Fr = lerp(0.04, 1.0f, FH);
+                float Gr = SmithGGX(ndotl, ndotv, 0.25f);
 
-
-                float3 output = (diffuse + Fsheen) * (1 - _Metallic) + (ndf * F * G);
+                float3 output = (diffuse + Fsheen) * (1 - _Metallic) + (ndf * F * G) + 0.25f * _ClearCoat * Gr * Fr * Dr;
                 output *= ndotl;
 
                 return float4(output, 1.0f);
