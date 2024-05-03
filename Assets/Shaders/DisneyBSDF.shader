@@ -55,12 +55,38 @@ Shader "Acerola/Disney" {
                 SHADOW_COORDS(4)
             };
 
+            float sqr(float x) { 
+                return x * x; 
+            }
+
             float luminance(float3 color) {
                 return dot(color, float3(0.299f, 0.587f, 0.114f));
             }
 
             float SchlickFresnel(float x) {
-                return pow(saturate(1 - x), 5);
+                x = saturate(1.0f - x);
+                float x2 = x * x;
+
+                return x2 * x2 * x; // While this is equivalent to pow(1 - x, 5) it is two less mult instructions
+            }
+
+            float GGX(float roughness, float ndoth) {
+                float roughnessSqr = sqr(roughness);
+                float ndothsqr = sqr(ndoth);
+                float tanndothsqr = (1 - ndothsqr) / ndothsqr;
+                return rcp(PI) * sqr(roughness / (ndothsqr * (roughnessSqr + tanndothsqr)));
+            }
+
+            float GGXGeometricAttenuation(float ndotl, float ndotv, float roughness) {
+                float roughnessSqr = sqr(roughness);
+
+                float ndotlsqr = sqr(ndotl);
+                float ndotvsqr = sqr(ndotv);
+
+                float SmithL = (2 * ndotl) / (ndotl + sqrt(roughnessSqr + (1 - roughnessSqr) * ndotlsqr));
+                float SmithV = (2 * ndotv) / (ndotv + sqrt(roughnessSqr + (1 - roughnessSqr) * ndotvsqr));
+
+                return SmithL * SmithV;
             }
 
             v2f vp(VertexData v) {
@@ -77,7 +103,7 @@ Shader "Acerola/Disney" {
 
             float4 fp(v2f i) : SV_TARGET {
                 float2 uv = i.uv;
-                float3 albedo = tex2D(_AlbedoTex, uv).rgb;
+                float3 albedo = tex2D(_AlbedoTex, uv).rgb * (1 - _Metallic);
                 
                 // Unpack DXT5nm tangent space normal
                 float3 N;
@@ -85,51 +111,31 @@ Shader "Acerola/Disney" {
                 N.xy *= _NormalStrength;
                 N.z = sqrt(1 - saturate(dot(N.xy, N.xy)));
                 float3 tangentSpaceNormal = N;
-                float3 binormal = cross(i.normal, i.tangent.xyz) * i.tangent.w * unity_WorldTransformParams.w;
+                float3 binormal = cross(i.normal, i.tangent.xyz) * i.tangent.w;
                 N = normalize(tangentSpaceNormal.x * i.tangent + tangentSpaceNormal.y * binormal + tangentSpaceNormal.z * i.normal);
 
-                float3 L = _WorldSpaceLightPos0.xyz; // Direction to light source
+                float3 L = normalize(lerp(_WorldSpaceLightPos0.xyz, _WorldSpaceLightPos0.xyz - i.worldPos.xyz, _WorldSpaceLightPos0.w));
                 float3 V = normalize(_WorldSpaceCameraPos.xyz - i.worldPos.xyz); // Direction to camera
                 float3 H = normalize(L + V); // Microfacet normal of perfect reflection
                 float3 R = normalize(reflect(-V, N)); // Direction of reflection across normal from viewer
+
+                // N = normalize(i.normal);
 
                 float ndotl = DotClamped(N, L);
                 float ndotv = DotClamped(N, V);
                 float ndoth = DotClamped(N, H);
                 float ldoth = DotClamped(L, H);
                 float vdoth = DotClamped(V, H);
+                float ldotv = DotClamped(L, V);
+                float rdotv = DotClamped(R, V);
 
-                float FL = SchlickFresnel(ndotl);
-                float FV = SchlickFresnel(ndotv);
-
-                // Diffuse Reflectance
-                
-                float FD90 = 0.5f + 2.0f * _Roughness * ldoth * ldoth;
-
-                float F = lerp(1.0f, FD90, FL) * lerp(1.0f, FD90, FV);
-
-                float3 diffuse = (albedo / PI) * F;
-
-                // Diffuse Subsurface Scattering Approximation
-
-                float Fss90 = ldoth * ldoth * _Roughness;
-                float Fss = lerp(1.0f, Fss90, FL) * lerp(1.0f, Fss90, FV);
-                float ss = 1.25f * (Fss * (rcp(ndotl + ndotv) - 0.5f) + 0.5f);
+                float ndf = GGX(_Roughness, ndoth);
+                float G = GGXGeometricAttenuation(ndotl, ndotv, _Roughness);
+                float F = _Specular + (1.0f - _Specular) * SchlickFresnel(ndotv);
 
 
-                // Distribution
-
-                float alpha = _Roughness * _Roughness;
-
-                float GTRdenom = 1.0f + (alpha * alpha - 1) * ndoth * ndoth;
-                float GTR = (alpha * alpha) / (PI * GTRdenom * GTRdenom);
-
-                float F0 = 0.0f;
-                float Fspec = lerp(F0, 1.0f, SchlickFresnel(ldoth));
-
-                float shadow = SHADOW_ATTENUATION(i);
-
-                float3 output = diffuse * ndotl * shadow;
+                float3 output = albedo + (ndf * F * G) / (4.0f * ndotl * ndotv);
+                output *= ndotl;
 
                 return float4(output, 1.0f);
             }
