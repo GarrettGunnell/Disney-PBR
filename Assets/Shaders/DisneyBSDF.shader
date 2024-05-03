@@ -104,7 +104,7 @@ Shader "Acerola/Disney" {
 
             float4 fp(v2f i) : SV_TARGET {
                 float2 uv = i.uv;
-                float3 albedo = tex2D(_AlbedoTex, uv).rgb * (1 - _Metallic);
+                float3 albedo = tex2D(_AlbedoTex, uv).rgb;
                 
                 // Unpack DXT5nm tangent space normal
                 float3 N;
@@ -165,11 +165,17 @@ Shader "Acerola/Disney" {
                 G = AnisotropicSmithGGX(ndotl, dot(L, X), dot(L, Y), alphaX, alphaY);
                 G *= AnisotropicSmithGGX(ndotv, dot(V, X), dot (V, Y), alphaX, alphaY);
 
+                float FH = SchlickFresnel(ldoth);
                 float F0 = _Specular;
-                float F = lerp(F0, 1.0f, SchlickFresnel(ldoth));
+                float F = lerp(F0, 1.0f, FH);
 
 
-                float3 output = diffuse * (1 - F) + (ndf * F * G);
+                // Sheen
+                float3 Fsheen = FH * _Sheen * 1.0f;
+
+
+
+                float3 output = (diffuse + Fsheen) * (1 - _Metallic) + (ndf * F * G);
                 output *= ndotl;
 
                 return float4(output, 1.0f);
