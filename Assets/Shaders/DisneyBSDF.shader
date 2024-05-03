@@ -134,7 +134,19 @@ Shader "Acerola/Disney" {
                 float ldotv = DotClamped(L, V);
                 float rdotv = DotClamped(R, V);
 
-                float alpha = _Roughness;
+                // Diffuse
+                float FL = SchlickFresnel(ndotl);
+                float FV = SchlickFresnel(ndotv);
+                float Fd90 = 0.5f + 2.0f * ldoth * ldoth * _Roughness;
+                float Fd = lerp(1.0f, Fd90, FL) * lerp(1.0f, Fd90, FV);
+
+
+
+                float3 diffuse = Fd * albedo;
+
+
+                // Specular
+                float alpha = _Roughness * _Roughness;
                 float alphaSquared = alpha * alpha;
 
                 float ndf = GGX(alphaSquared, ndoth);
@@ -145,7 +157,7 @@ Shader "Acerola/Disney" {
                 float F = lerp(F0, 1.0f, SchlickFresnel(ldoth));
 
 
-                float3 output = albedo * (1 - F) + (ndf * F * G);
+                float3 output = diffuse * (1 - F) + (ndf * F * G);
                 output *= ndotl;
 
                 return float4(output, 1.0f);
