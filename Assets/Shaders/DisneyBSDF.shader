@@ -86,6 +86,10 @@ Shader "Acerola/Disney" {
                 return 0.5f / (a + b);
             }
 
+            float AnisotropicSmithGGX(float ndots, float sdotx, float sdoty, float ax, float ay) {
+                return rcp(ndots + sqrt(sqr(sdotx * ax) + sqr(sdoty * ay) + sqr(ndots)));
+            }
+
             v2f vp(VertexData v) {
                 v2f i;
                 i.pos = UnityObjectToClipPos(v.vertex);
@@ -158,6 +162,8 @@ Shader "Acerola/Disney" {
                 ndf = Ds;
 
                 float G = SmithGGX(alphaSquared, ndotl, ndotv); // specular brdf denominator (4 * ndotl * ndotv) is baked into output here  
+                G = AnisotropicSmithGGX(ndotl, dot(L, X), dot(L, Y), alphaX, alphaY);
+                G *= AnisotropicSmithGGX(ndotv, dot(V, X), dot (V, Y), alphaX, alphaY);
 
                 float F0 = _Specular;
                 float F = lerp(F0, 1.0f, SchlickFresnel(ldoth));
