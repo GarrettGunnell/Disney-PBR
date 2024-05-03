@@ -4,9 +4,10 @@ Shader "Acerola/Disney" {
         _AlbedoTex ("Albedo", 2D) = "" {}
         _NormalTex ("Normal", 2D) = "" {}
         _NormalStrength ("Normal Strength", Range(0.0, 3.0)) = 1.0
+        _BaseColor("Base Color", Color) = (1, 1, 1, 1)
         _Metallic ("Metallic", Range(0.0, 1.0)) = 0
         _Subsurface ("Subsurface", Range(0.0, 1.0)) = 0
-        _Specular ("Specular", Range(0.0, 1.0)) = 0.5
+        _Specular ("Specular", Range(0.0, 2.0)) = 0.5
         _Roughness ("Roughness", Range(0.0, 1.0)) = 0.5
         _SpecularTint ("Specular Tint", Range(0.0, 1.0)) = 0.0
         _Anisotropic ("Anisotropic", Range(0.0, 1.0)) = 0.0
@@ -37,6 +38,7 @@ Shader "Acerola/Disney" {
             #define PI 3.14159265f
 
             sampler2D _AlbedoTex, _NormalTex;
+            float3 _BaseColor;
             float _NormalStrength, _Roughness, _Metallic, _Subsurface, _Specular, _SpecularTint, _Anisotropic, _Sheen, _SheenTint, _ClearCoat, _ClearCoatGloss;
 
             struct VertexData {
@@ -110,14 +112,13 @@ Shader "Acerola/Disney" {
 
             float4 fp(v2f i) : SV_TARGET {
                 float2 uv = i.uv;
-                float3 albedo = tex2D(_AlbedoTex, uv).rgb;
                 
                 // Unpack DXT5nm tangent space normal
                 float3 N;
                 N.xy = tex2D(_NormalTex, uv).wy * 2 - 1;
                 N.xy *= _NormalStrength;
                 N.z = sqrt(1 - saturate(dot(N.xy, N.xy)));
-                float3 tangentSpaceNormal = N;
+                float3 tangentSpaceNormal = normalize(N);
                 float3 binormal = cross(i.normal, i.tangent.xyz) * i.tangent.w;
                 N = normalize(tangentSpaceNormal.x * i.tangent + tangentSpaceNormal.y * binormal + tangentSpaceNormal.z * i.normal);
 
@@ -138,6 +139,16 @@ Shader "Acerola/Disney" {
                 float ldotv = DotClamped(L, V);
                 float rdotv = DotClamped(R, V);
 
+                
+                float3 albedo = tex2D(_AlbedoTex, uv).rgb;
+
+                float Cdlum = luminance(_BaseColor);
+
+                float3 Ctint = Cdlum > 0.0f ? albedo / Cdlum : 1.0f;
+                float3 Cspec0 = lerp(_Specular * 0.08f * lerp(1.0f, Ctint, _SpecularTint), _BaseColor, _Metallic);
+                float3 Csheen = lerp(1.0f, Ctint, _SheenTint);
+
+
                 // Disney Diffuse
                 float FL = SchlickFresnel(ndotl);
                 float FV = SchlickFresnel(ndotv);
@@ -152,7 +163,7 @@ Shader "Acerola/Disney" {
                 float Fss = lerp(1.0f, Fss90, FL) * lerp(1.0f, Fss90, FV);
                 float ss = 1.25f * (Fss * (1 / (ndotl + ndotv) - 0.5f) + 0.5f);
 
-                float3 diffuse = lerp(Fd, ss, _Subsurface) * albedo;
+                float3 diffuse = _LightColor0 * lerp(Fd, ss, _Subsurface) * _BaseColor * albedo * (1 - _Metallic);
 
                 // Specular
                 float alpha = _Roughness * _Roughness;
@@ -168,23 +179,26 @@ Shader "Acerola/Disney" {
                 ndf = Ds;
 
                 float G = SmithGGX(alphaSquared, ndotl, ndotv); // specular brdf denominator (4 * ndotl * ndotv) is baked into output here  
-                G = AnisotropicSmithGGX(ndotl, dot(L, X), dot(L, Y), alphaX, alphaY);
-                G *= AnisotropicSmithGGX(ndotv, dot(V, X), dot (V, Y), alphaX, alphaY);
+                float GalphaSquared = sqr(0.5f + _Roughness * 0.5f);
+                float GaspectRatio = sqrt(1.0f - _Anisotropic * 0.9f);
+                float GalphaX = max(0.001f, GalphaSquared / GaspectRatio);
+                float GalphaY = max(0.001f, GalphaSquared * GaspectRatio);
+                G = AnisotropicSmithGGX(ndotl, dot(L, X), dot(L, Y), GalphaX, GalphaY);
+                G *= AnisotropicSmithGGX(ndotv, dot(V, X), dot (V, Y), GalphaX, GalphaY);
+
 
                 float FH = SchlickFresnel(ldoth);
-                float F0 = _Specular;
-                float F = lerp(F0, 1.0f, FH);
-
+                float3 F = lerp(Cspec0, 1.0f, FH);
 
                 // Sheen
-                float3 Fsheen = FH * _Sheen * 1.0f;
+                float3 Fsheen = FH * _Sheen * Csheen;
 
                 // Clearcoat (Hard Coded Index Of Refraction -> 1.5f -> F0 -> 0.04)
                 float Dr = GTR1(ndoth, lerp(0.1f, 0.001f, _ClearCoatGloss)); // Normalized Isotropic GTR Gamma == 1
                 float Fr = lerp(0.04, 1.0f, FH);
                 float Gr = SmithGGX(ndotl, ndotv, 0.25f);
 
-                float3 output = (diffuse + Fsheen) * (1 - _Metallic) + (ndf * F * G) + 0.25f * _ClearCoat * Gr * Fr * Dr;
+                float3 output = (diffuse + Fsheen) * (1 - F) + _LightColor0 * (ndf * F * G) + 0.25f * _ClearCoat * Gr * Fr * Dr;
                 output *= ndotl;
 
                 return float4(output, 1.0f);
