@@ -134,15 +134,21 @@ Shader "Acerola/Disney" {
                 float ldotv = DotClamped(L, V);
                 float rdotv = DotClamped(R, V);
 
-                // Diffuse
+                // Disney Diffuse
                 float FL = SchlickFresnel(ndotl);
                 float FV = SchlickFresnel(ndotv);
-                float Fd90 = 0.5f + 2.0f * ldoth * ldoth * _Roughness;
+
+                float Fss90 = ldoth * ldoth * _Roughness;
+                float Fd90 = 0.5f + 2.0f * Fss90;
+                
                 float Fd = lerp(1.0f, Fd90, FL) * lerp(1.0f, Fd90, FV);
 
+                // Subsurface Diffuse (Hanrahan-Krueger brdf approximation)
 
+                float Fss = lerp(1.0f, Fss90, FL) * lerp(1.0f, Fss90, FV);
+                float ss = 1.25f * (Fss * (1 / (ndotl + ndotv) - 0.5f) + 0.5f);
 
-                float3 diffuse = Fd * albedo;
+                float3 diffuse = lerp(Fd, ss, _Subsurface) * albedo;
 
 
                 // Specular
