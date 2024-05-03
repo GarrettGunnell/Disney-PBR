@@ -75,16 +75,8 @@ Shader "Acerola/Disney" {
                 return alphaSquared / (PI * b * b);
             }
 
-            float GGXGeometricAttenuation(float ndotl, float ndotv, float roughness) {
-                float roughnessSqr = sqr(roughness);
-
-                float ndotlsqr = sqr(ndotl);
-                float ndotvsqr = sqr(ndotv);
-
-                float SmithL = (2 * ndotl) / (ndotl + sqrt(roughnessSqr + (1 - roughnessSqr) * ndotlsqr));
-                float SmithV = (2 * ndotv) / (ndotv + sqrt(roughnessSqr + (1 - roughnessSqr) * ndotvsqr));
-
-                return SmithL * SmithV;
+            float AnisotropicGTR2(float ndoth, float hdotx, float hdoty, float ax, float ay) {
+                return rcp(PI * ax * ay * sqr(sqr(hdotx / ax) + sqr(hdoty / ay) + sqr(ndoth)));
             }
 
             float SmithGGX(float alphaSquared, float ndotl, float ndotv) {
@@ -123,6 +115,8 @@ Shader "Acerola/Disney" {
                 float3 V = normalize(_WorldSpaceCameraPos.xyz - i.worldPos.xyz); // Direction to camera
                 float3 H = normalize(L + V); // Microfacet normal of perfect reflection
                 float3 R = normalize(reflect(-V, N)); // Direction of reflection across normal from viewer
+                float3 X = normalize(i.tangent.xyz);
+                float3 Y = binormal;
 
                 // N = normalize(i.normal);
 
@@ -140,7 +134,7 @@ Shader "Acerola/Disney" {
 
                 float Fss90 = ldoth * ldoth * _Roughness;
                 float Fd90 = 0.5f + 2.0f * Fss90;
-                
+
                 float Fd = lerp(1.0f, Fd90, FL) * lerp(1.0f, Fd90, FV);
 
                 // Subsurface Diffuse (Hanrahan-Krueger brdf approximation)
@@ -150,12 +144,18 @@ Shader "Acerola/Disney" {
 
                 float3 diffuse = lerp(Fd, ss, _Subsurface) * albedo;
 
-
                 // Specular
                 float alpha = _Roughness * _Roughness;
                 float alphaSquared = alpha * alpha;
 
+                // Anisotropic Microfacet Normal Distribution (Normalized Anisotropic GTR gamma == 2)
+                float aspectRatio = sqrt(1.0f - _Anisotropic * 0.9f);
+                float alphaX = max(0.001f, alphaSquared / aspectRatio);
+                float alphaY = max(0.001f, alphaSquared * aspectRatio);
+                float Ds = AnisotropicGTR2(ndoth, dot(H, X), dot(H, Y), alphaX, alphaY);
+
                 float ndf = GGX(alphaSquared, ndoth);
+                ndf = Ds;
 
                 float G = SmithGGX(alphaSquared, ndotl, ndotv); // specular brdf denominator (4 * ndotl * ndotv) is baked into output here  
 
