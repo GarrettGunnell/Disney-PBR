@@ -70,11 +70,9 @@ Shader "Acerola/Disney" {
                 return x2 * x2 * x; // While this is equivalent to pow(1 - x, 5) it is two less mult instructions
             }
 
-            float GGX(float roughness, float ndoth) {
-                float roughnessSqr = sqr(roughness);
-                float ndothsqr = sqr(ndoth);
-                float tanndothsqr = (1 - ndothsqr) / ndothsqr;
-                return rcp(PI) * sqr(roughness / (ndothsqr * (roughnessSqr + tanndothsqr)));
+            float GGX(float alphaSquared, float ndoth) {
+                float b = ((alphaSquared - 1.0f) * ndoth * ndoth + 1.0f);
+                return alphaSquared / (PI * b * b);
             }
 
             float GGXGeometricAttenuation(float ndotl, float ndotv, float roughness) {
@@ -87,6 +85,13 @@ Shader "Acerola/Disney" {
                 float SmithV = (2 * ndotv) / (ndotv + sqrt(roughnessSqr + (1 - roughnessSqr) * ndotvsqr));
 
                 return SmithL * SmithV;
+            }
+
+            float SmithGGX(float alphaSquared, float ndotl, float ndotv) {
+                float a = ndotv * sqrt(alphaSquared + ndotl * (ndotl - alphaSquared * ndotl));
+                float b = ndotl * sqrt(alphaSquared + ndotv * (ndotv - alphaSquared * ndotv));
+
+                return 0.5f / (a + b);
             }
 
             v2f vp(VertexData v) {
@@ -129,15 +134,18 @@ Shader "Acerola/Disney" {
                 float ldotv = DotClamped(L, V);
                 float rdotv = DotClamped(R, V);
 
-                float alpha = _Roughness * _Roughness;
+                float alpha = _Roughness;
+                float alphaSquared = alpha * alpha;
 
-                float ndf = GGX(alpha, ndoth);
-                float G = GGXGeometricAttenuation(ndotl, ndotv, alpha);
+                float ndf = GGX(alphaSquared, ndoth);
+
+                float G = SmithGGX(alphaSquared, ndotl, ndotv); // specular brdf denominator (4 * ndotl * ndotv) is baked into output here  
+
                 float F0 = _Specular;
                 float F = lerp(F0, 1.0f, SchlickFresnel(ldoth));
 
 
-                float3 output = albedo * (1 - F) + (ndf * F * G) / (4.0f * ndotl * ndotv);
+                float3 output = albedo * (1 - F) + (ndf * F * G);
                 output *= ndotl;
 
                 return float4(output, 1.0f);
