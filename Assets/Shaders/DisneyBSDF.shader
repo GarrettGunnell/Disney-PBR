@@ -99,43 +99,21 @@ Shader "Acerola/Disney" {
                 return rcp(ndots + sqrt(sqr(sdotx * ax) + sqr(sdoty * ay) + sqr(ndots)));
             }
 
-            v2f vp(VertexData v) {
-                v2f i;
-                i.pos = UnityObjectToClipPos(v.vertex);
-                i.worldPos = mul(unity_ObjectToWorld, v.vertex);
-                i.objectPos = v.vertex;
-                i.normal = UnityObjectToWorldNormal(v.normal);
-                i.tangent = float4(UnityObjectToWorldDir(v.tangent.xyz), v.tangent.w);
-                i.uv = v.uv;
-                TRANSFER_SHADOW(i);
+            struct BRDFResults {
+                float3 diffuse;
+                float3 specular;
+                float3 clearcoat;
+            };
 
-                return i;
-            }
+            BRDFResults DisneyBRDF(float3 L, float3 V, float3 N, float3 X, float3 Y) {
+                BRDFResults output;
 
-            float4 fp(v2f i) : SV_TARGET {
-                float2 uv = i.uv;
-                
-                // Unpack DXT5nm tangent space normal
-                float3 N;
-                N.xy = tex2D(_NormalTex, uv).wy * 2 - 1;
-                N.xy *= _NormalStrength;
-                N.z = sqrt(1 - saturate(dot(N.xy, N.xy)));
-                float3 tangentSpaceNormal = normalize(N);
-                float3 binormal = cross(i.normal, i.tangent.xyz) * i.tangent.w;
-                N = normalize(tangentSpaceNormal.x * i.tangent + tangentSpaceNormal.y * binormal + tangentSpaceNormal.z * i.normal);
-
-                float3 L = normalize(_WorldSpaceLightPos0.xyz);
-                float3 V = normalize(_WorldSpaceCameraPos.xyz - i.worldPos.xyz); // Direction to camera
                 float3 H = normalize(L + V); // Microfacet normal of perfect reflection
-                float3 X = normalize(i.tangent.xyz);
-                float3 Y = binormal;
 
                 float ndotl = DotClamped(N, L);
                 float ndotv = DotClamped(N, V);
                 float ndoth = DotClamped(N, H);
                 float ldoth = DotClamped(L, H);
-                
-                float3 albedo = tex2D(_AlbedoTex, uv).rgb;
 
                 float Cdlum = luminance(_BaseColor);
 
@@ -157,8 +135,6 @@ Shader "Acerola/Disney" {
 
                 float Fss = lerp(1.0f, Fss90, FL) * lerp(1.0f, Fss90, FV);
                 float ss = 1.25f * (Fss * (rcp(ndotl + ndotv) - 0.5f) + 0.5f);
-
-                float3 diffuse = _LightColor0 * lerp(Fd, ss, _Subsurface) * albedo * (1 - _Metallic);
 
                 // Specular
                 float alpha = _Roughness;
@@ -189,8 +165,51 @@ Shader "Acerola/Disney" {
                 float Fr = lerp(0.04, 1.0f, FH);
                 float Gr = SmithGGX(ndotl, ndotv, 0.25f);
 
-                float3 output = (diffuse + Fsheen) + _LightColor0 * (Ds * F * G) + 0.25f * _ClearCoat * Gr * Fr * Dr;
-                output *= ndotl;
+                
+                output.diffuse = (lerp(Fd, ss, _Subsurface) + Fsheen) * (1 - _Metallic);
+                output.specular = Ds * F * G;
+                output.clearcoat = _ClearCoat * Gr * Fr * Dr;
+
+                return output;
+            }
+
+            v2f vp(VertexData v) {
+                v2f i;
+                i.pos = UnityObjectToClipPos(v.vertex);
+                i.worldPos = mul(unity_ObjectToWorld, v.vertex);
+                i.objectPos = v.vertex;
+                i.normal = UnityObjectToWorldNormal(v.normal);
+                i.tangent = float4(UnityObjectToWorldDir(v.tangent.xyz), v.tangent.w);
+                i.uv = v.uv;
+                TRANSFER_SHADOW(i);
+
+                return i;
+            }
+
+            float4 fp(v2f i) : SV_TARGET {
+                float2 uv = i.uv;
+                
+                // Unpack DXT5nm tangent space normal
+                float3 N;
+                N.xy = tex2D(_NormalTex, uv).wy * 2 - 1;
+                N.xy *= _NormalStrength;
+                N.z = sqrt(1 - saturate(dot(N.xy, N.xy)));
+                float3 tangentSpaceNormal = normalize(N);
+                float3 binormal = cross(i.normal, i.tangent.xyz) * i.tangent.w;
+                N = normalize(tangentSpaceNormal.x * i.tangent + tangentSpaceNormal.y * binormal + tangentSpaceNormal.z * i.normal);
+
+                
+                float3 albedo = tex2D(_AlbedoTex, uv).rgb;
+
+                float3 L = normalize(_WorldSpaceLightPos0.xyz); // Direction *towards* light source
+                float3 V = normalize(_WorldSpaceCameraPos.xyz - i.worldPos.xyz); // Direction *towards* camera
+                float3 X = normalize(i.tangent.xyz);
+                float3 Y = binormal;
+
+                BRDFResults reflection = DisneyBRDF(L, V, N, X, Y);
+
+                float3 output = _LightColor0 * (reflection.diffuse * albedo + reflection.specular + reflection.clearcoat);
+                output *= DotClamped(N, L);
 
                 return float4(output, 1.0f);
             }
