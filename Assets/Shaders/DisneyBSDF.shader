@@ -158,7 +158,7 @@ Shader "Acerola/Disney" {
             float Gr = SmithGGX(ndotl, ndotv, 0.25f);
 
             
-            output.diffuse = (lerp(Fd, ss, _Subsurface) + Fsheen) * (1 - _Metallic);
+            output.diffuse = (1.0f / PI) * (lerp(Fd, ss, _Subsurface) + Fsheen) * (1 - _Metallic);
             output.specular = Ds * F * G;
             output.clearcoat = _ClearCoat * Gr * Fr * Dr;
 
