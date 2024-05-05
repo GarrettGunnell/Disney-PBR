@@ -69,10 +69,10 @@ Material:
         m_Offset: {x: 0, y: 0}
     m_Ints: []
     m_Floats:
-    - _Anisotropic: 0.424
+    - _Anisotropic: 0
     - _BumpScale: 1
-    - _ClearCoat: 1
-    - _ClearCoatGloss: 0.697
+    - _ClearCoat: 0.978
+    - _ClearCoatGloss: 0.38
     - _Cutoff: 0.5
     - _DetailNormalMapScale: 1
     - _DstBlend: 0
@@ -81,22 +81,22 @@ Material:
     - _GlossyReflections: 1
     - _Metallic: 0
     - _Mode: 0
-    - _NormalStrength: 0.84
+    - _NormalStrength: 0.81
     - _OcclusionStrength: 1
     - _Parallax: 0.02
-    - _Roughness: 0.852
+    - _Roughness: 0.638
     - _Sheen: 1
-    - _SheenTint: 1
+    - _SheenTint: 0
     - _SmoothnessTextureChannel: 0
-    - _Specular: 0.21
+    - _Specular: 0.32
     - _SpecularHighlights: 1
-    - _SpecularTint: 0.446
+    - _SpecularTint: 0
     - _SrcBlend: 1
-    - _Subsurface: 1
+    - _Subsurface: 0.332
     - _UVSec: 0
     - _ZWrite: 1
     m_Colors:
-    - _BaseColor: {r: 1, g: 0.8915094, b: 0.89265406, a: 1}
+    - _BaseColor: {r: 1, g: 0.8443396, b: 0.849204, a: 1}
     - _Color: {r: 1, g: 1, b: 1, a: 1}
     - _EmissionColor: {r: 0, g: 0, b: 0, a: 1}
   m_BuildTextureStacks: []

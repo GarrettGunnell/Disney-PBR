@@ -9,6 +9,8 @@ Material:
   m_PrefabAsset: {fileID: 0}
   m_Name: MudBlinnPhong
   m_Shader: {fileID: 4800000, guid: b2ddb68fb374d89419e6987189b39392, type: 3}
+  m_Parent: {fileID: 0}
+  m_ModifiedSerializedProperties: 0
   m_ValidKeywords: []
   m_InvalidKeywords: []
   m_LightmapFlags: 4
@@ -17,6 +19,7 @@ Material:
   m_CustomRenderQueue: -1
   stringTagMap: {}
   disabledShaderPasses: []
+  m_LockedProperties: 
   m_SavedProperties:
     serializedVersion: 3
     m_TexEnvs:
@@ -81,24 +84,24 @@ Material:
     - _BumpScale: 1
     - _Cutoff: 0.5
     - _DetailNormalMapScale: 1
-    - _DirectSpecularPeak: 67.3
+    - _DirectSpecularPeak: 200
     - _DstBlend: 0
-    - _F0: 1.01
-    - _F1: 1.2
+    - _F0: 1
+    - _F1: 0
     - _GlossMapScale: 1
     - _Glossiness: 0.5
     - _GlossyReflections: 1
-    - _IndirectSpecularPeak: 2.7
+    - _IndirectSpecularPeak: 7.9
     - _IndirectSpecularStrength: 1
     - _Metallic: 0
     - _Mode: 0
-    - _NormalStrength: 0.64
+    - _NormalStrength: 0.82
     - _OcclusionStrength: 1
     - _Parallax: 0.02
     - _ShininessStrength: 53.5
     - _SmoothnessTextureChannel: 0
     - _SpecularHighlights: 1
-    - _SpecularStrength: 1
+    - _SpecularStrength: 0.29
     - _SrcBlend: 1
     - _UVSec: 0
     - _ZWrite: 1
@@ -106,3 +109,4 @@ Material:
     - _Color: {r: 1, g: 1, b: 1, a: 1}
     - _EmissionColor: {r: 0, g: 0, b: 0, a: 1}
   m_BuildTextureStacks: []
+  m_AllowLocking: 1
