@@ -54,7 +54,8 @@ Shader "Acerola/Disney" {
                 float3 normal : TEXCOORD1;
                 float4 tangent : TEXCOORD2;
                 float3 worldPos : TEXCOORD3;
-                SHADOW_COORDS(4)
+                float3 objectPos : TEXCOORD4;
+                SHADOW_COORDS(5)
             };
 
             float sqr(float x) { 
@@ -102,6 +103,7 @@ Shader "Acerola/Disney" {
                 v2f i;
                 i.pos = UnityObjectToClipPos(v.vertex);
                 i.worldPos = mul(unity_ObjectToWorld, v.vertex);
+                i.objectPos = v.vertex;
                 i.normal = UnityObjectToWorldNormal(v.normal);
                 i.tangent = float4(UnityObjectToWorldDir(v.tangent.xyz), v.tangent.w);
                 i.uv = v.uv;
@@ -122,29 +124,22 @@ Shader "Acerola/Disney" {
                 float3 binormal = cross(i.normal, i.tangent.xyz) * i.tangent.w;
                 N = normalize(tangentSpaceNormal.x * i.tangent + tangentSpaceNormal.y * binormal + tangentSpaceNormal.z * i.normal);
 
-                float3 L = normalize(lerp(_WorldSpaceLightPos0.xyz, _WorldSpaceLightPos0.xyz - i.worldPos.xyz, _WorldSpaceLightPos0.w));
+                float3 L = normalize(_WorldSpaceLightPos0.xyz);
                 float3 V = normalize(_WorldSpaceCameraPos.xyz - i.worldPos.xyz); // Direction to camera
                 float3 H = normalize(L + V); // Microfacet normal of perfect reflection
-                float3 R = normalize(reflect(-V, N)); // Direction of reflection across normal from viewer
                 float3 X = normalize(i.tangent.xyz);
                 float3 Y = binormal;
-
-                // N = normalize(i.normal);
 
                 float ndotl = DotClamped(N, L);
                 float ndotv = DotClamped(N, V);
                 float ndoth = DotClamped(N, H);
                 float ldoth = DotClamped(L, H);
-                float vdoth = DotClamped(V, H);
-                float ldotv = DotClamped(L, V);
-                float rdotv = DotClamped(R, V);
-
                 
                 float3 albedo = tex2D(_AlbedoTex, uv).rgb;
 
                 float Cdlum = luminance(_BaseColor);
 
-                float3 Ctint = Cdlum > 0.0f ? albedo / Cdlum : 1.0f;
+                float3 Ctint = Cdlum > 0.0f ? _BaseColor / Cdlum : 1.0f;
                 float3 Cspec0 = lerp(_Specular * 0.08f * lerp(1.0f, Ctint, _SpecularTint), _BaseColor, _Metallic);
                 float3 Csheen = lerp(1.0f, Ctint, _SheenTint);
 
@@ -161,12 +156,12 @@ Shader "Acerola/Disney" {
                 // Subsurface Diffuse (Hanrahan-Krueger brdf approximation)
 
                 float Fss = lerp(1.0f, Fss90, FL) * lerp(1.0f, Fss90, FV);
-                float ss = 1.25f * (Fss * (1 / (ndotl + ndotv) - 0.5f) + 0.5f);
+                float ss = 1.25f * (Fss * (rcp(ndotl + ndotv) - 0.5f) + 0.5f);
 
-                float3 diffuse = _LightColor0 * lerp(Fd, ss, _Subsurface) * _BaseColor * albedo * (1 - _Metallic);
+                float3 diffuse = _LightColor0 * lerp(Fd, ss, _Subsurface) * albedo * (1 - _Metallic);
 
                 // Specular
-                float alpha = _Roughness * _Roughness;
+                float alpha = _Roughness;
                 float alphaSquared = alpha * alpha;
 
                 // Anisotropic Microfacet Normal Distribution (Normalized Anisotropic GTR gamma == 2)
@@ -175,18 +170,14 @@ Shader "Acerola/Disney" {
                 float alphaY = max(0.001f, alphaSquared * aspectRatio);
                 float Ds = AnisotropicGTR2(ndoth, dot(H, X), dot(H, Y), alphaX, alphaY);
 
-                float ndf = GGX(alphaSquared, ndoth);
-                ndf = Ds;
-
-                float G = SmithGGX(alphaSquared, ndotl, ndotv); // specular brdf denominator (4 * ndotl * ndotv) is baked into output here  
+                // Geometric Attenuation
                 float GalphaSquared = sqr(0.5f + _Roughness * 0.5f);
-                float GaspectRatio = sqrt(1.0f - _Anisotropic * 0.9f);
-                float GalphaX = max(0.001f, GalphaSquared / GaspectRatio);
-                float GalphaY = max(0.001f, GalphaSquared * GaspectRatio);
-                G = AnisotropicSmithGGX(ndotl, dot(L, X), dot(L, Y), GalphaX, GalphaY);
-                G *= AnisotropicSmithGGX(ndotv, dot(V, X), dot (V, Y), GalphaX, GalphaY);
+                float GalphaX = max(0.001f, GalphaSquared / aspectRatio);
+                float GalphaY = max(0.001f, GalphaSquared * aspectRatio);
+                float G = AnisotropicSmithGGX(ndotl, dot(L, X), dot(L, Y), GalphaX, GalphaY);
+                G *= AnisotropicSmithGGX(ndotv, dot(V, X), dot (V, Y), GalphaX, GalphaY); // specular brdf denominator (4 * ndotl * ndotv) is baked into output here (I assume at least)  
 
-
+                // Fresnel Reflectance
                 float FH = SchlickFresnel(ldoth);
                 float3 F = lerp(Cspec0, 1.0f, FH);
 
@@ -198,7 +189,7 @@ Shader "Acerola/Disney" {
                 float Fr = lerp(0.04, 1.0f, FH);
                 float Gr = SmithGGX(ndotl, ndotv, 0.25f);
 
-                float3 output = (diffuse + Fsheen) * (1 - F) + _LightColor0 * (ndf * F * G) + 0.25f * _ClearCoat * Gr * Fr * Dr;
+                float3 output = (diffuse + Fsheen) + _LightColor0 * (Ds * F * G) + 0.25f * _ClearCoat * Gr * Fr * Dr;
                 output *= ndotl;
 
                 return float4(output, 1.0f);

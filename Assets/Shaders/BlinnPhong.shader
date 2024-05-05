@@ -49,13 +49,15 @@ Shader "Acerola/BlinnPhong" {
                 float3 normal : TEXCOORD1;
                 float4 tangent : TEXCOORD2;
                 float3 worldPos : TEXCOORD3;
-                SHADOW_COORDS(4)
+                float3 objectPos : TEXCOORD4;
+                SHADOW_COORDS(5)
             };
 
             v2f vp(VertexData v) {
                 v2f i;
                 i.pos = UnityObjectToClipPos(v.vertex);
                 i.worldPos = mul(unity_ObjectToWorld, v.vertex);
+                i.objectPos = v.vertex;
                 i.normal = UnityObjectToWorldNormal(v.normal);
                 i.tangent = float4(UnityObjectToWorldDir(v.tangent.xyz), v.tangent.w);
                 i.uv = v.uv;
@@ -81,7 +83,7 @@ Shader "Acerola/BlinnPhong" {
 
                 float shadow = SHADOW_ATTENUATION(i);
 
-                float3 lightDir = normalize(_WorldSpaceLightPos0 - i.worldPos);
+                float3 lightDir = _WorldSpaceLightPos0.xyz;
                 float3 viewDir = normalize(_WorldSpaceCameraPos - i.worldPos);
                 float3 halfwayDir = normalize(_WorldSpaceLightPos0 + viewDir);
                 float3 reflectedDir = reflect(-viewDir, normal);
@@ -91,6 +93,7 @@ Shader "Acerola/BlinnPhong" {
                 float fresnel = exponential + (_F0) * (1.0f - exponential);
 
                 float shininess = saturate(tex2D(_ShininessTex, uv).r * 2.0f);
+                shininess = 1.0f;
                 float spec = pow(DotClamped(normal, halfwayDir), _DirectSpecularPeak) * shininess;
                 spec *= fresnel;
 
@@ -106,7 +109,7 @@ Shader "Acerola/BlinnPhong" {
                 float3 indirectSpecular = texCUBElod(_SkyboxCube, float4(reflectedDir, 0)).rgb * indirectFresnel * indirectSpec * _IndirectSpecularStrength;
                 float3 indirectLight = indirectDiffuse + indirectSpecular;
 
-                return float4(directLight + indirectLight, 1.0f);
+                return float4(directLight, 1.0f);
             }
 
             ENDCG
