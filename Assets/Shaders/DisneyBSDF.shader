@@ -3,6 +3,7 @@ Shader "Acerola/Disney" {
     Properties {
         _AlbedoTex ("Albedo", 2D) = "" {}
         _NormalTex ("Normal", 2D) = "" {}
+        _TangentTex ("Tangent", 2D) = "" {}
         _NormalStrength ("Normal Strength", Range(0.0, 3.0)) = 1.0
         _BaseColor("Base Color", Color) = (1, 1, 1, 1)
         _Metallic ("Metallic", Range(0.0, 1.0)) = 0
@@ -26,7 +27,7 @@ Shader "Acerola/Disney" {
 
         #define PI 3.14159265f
 
-        sampler2D _AlbedoTex, _NormalTex;
+        sampler2D _AlbedoTex, _NormalTex, _TangentTex;
         float3 _BaseColor;
         float _NormalStrength, _Roughness, _Metallic, _Subsurface, _Specular, _SpecularTint, _Anisotropic, _Sheen, _SheenTint, _ClearCoat, _ClearCoatGloss;
 
@@ -196,22 +197,40 @@ Shader "Acerola/Disney" {
             float4 fp(v2f i) : SV_TARGET {
                 float2 uv = i.uv;
                 
-                // Unpack DXT5nm tangent space normal
-                float3 N;
-                N.xy = tex2D(_NormalTex, uv).wy * 2 - 1;
-                N.xy *= _NormalStrength;
-                N.z = sqrt(1 - saturate(dot(N.xy, N.xy)));
-                float3 tangentSpaceNormal = normalize(N);
-                float3 binormal = cross(i.normal, i.tangent.xyz) * i.tangent.w;
-                N = normalize(tangentSpaceNormal.x * i.tangent + tangentSpaceNormal.y * binormal + tangentSpaceNormal.z * i.normal);
+                float3 unnormalizedNormalWS = i.normal;
+                float renormFactor = 1.0f / length(unnormalizedNormalWS);
 
+                float3x3 worldToTangent;
+                float3 bitangent = cross(unnormalizedNormalWS, i.tangent.xyz) * i.tangent.w;
+                worldToTangent[0] = i.tangent.xyz * renormFactor;
+                worldToTangent[1] = bitangent * renormFactor;
+                worldToTangent[2] = unnormalizedNormalWS * renormFactor;
+
+                // Unpack DXT5nm tangent space normal
+                float4 packedNormal = tex2D(_NormalTex, uv);
+                packedNormal.w *= packedNormal.x;
+
+                float3 N;
+                N.xy = packedNormal.wy * 2.0f - 1.0f;
+                N.xy *= _NormalStrength;
+                N.z = sqrt(1.0f - saturate(dot(N.xy, N.xy)));
+                N = mul(N, worldToTangent);
+
+                // Unpack DXT5nm tangent space tangent
+                float3 T;
+                T.xy = tex2D(_TangentTex, uv).wy * 2 - 1;
+                T.z = sqrt(1 - saturate(dot(T.xy, T.xy)));
+
+                T = mul(lerp(float3(1.0f, 0.0f, 0.0f), T, saturate(_NormalStrength)), worldToTangent);
                 
                 float3 albedo = tex2D(_AlbedoTex, uv).rgb;
 
                 float3 L = normalize(_WorldSpaceLightPos0.xyz); // Direction *towards* light source
                 float3 V = normalize(_WorldSpaceCameraPos.xyz - i.worldPos.xyz); // Direction *towards* camera
-                float3 X = normalize(i.tangent.xyz);
-                float3 Y = binormal;
+                float3 X = normalize(T);
+                float3 Y = normalize(cross(N, T) * i.tangent.w);
+
+                // return float4(Y.xyz, 1.0f);
 
                 BRDFResults reflection = DisneyBRDF(L, V, N, X, Y);
 
@@ -256,27 +275,46 @@ Shader "Acerola/Disney" {
             float4 fp(v2f i) : SV_TARGET {
                 float2 uv = i.uv;
                 
-                // Unpack DXT5nm tangent space normal
-                float3 N;
-                N.xy = tex2D(_NormalTex, uv).wy * 2 - 1;
-                N.xy *= _NormalStrength;
-                N.z = sqrt(1 - saturate(dot(N.xy, N.xy)));
-                float3 tangentSpaceNormal = normalize(N);
-                float3 binormal = cross(i.normal, i.tangent.xyz) * i.tangent.w;
-                N = normalize(tangentSpaceNormal.x * i.tangent + tangentSpaceNormal.y * binormal + tangentSpaceNormal.z * i.normal);
+                float3 unnormalizedNormalWS = i.normal;
+                float renormFactor = 1.0f / length(unnormalizedNormalWS);
 
+                float3x3 worldToTangent;
+                float3 bitangent = cross(unnormalizedNormalWS, i.tangent.xyz) * i.tangent.w;
+                worldToTangent[0] = i.tangent.xyz * renormFactor;
+                worldToTangent[1] = bitangent * renormFactor;
+                worldToTangent[2] = unnormalizedNormalWS * renormFactor;
+
+                // Unpack DXT5nm tangent space normal
+                float4 packedNormal = tex2D(_NormalTex, uv);
+                packedNormal.w *= packedNormal.x;
+
+                float3 N;
+                N.xy = packedNormal.wy * 2.0f - 1.0f;
+                N.xy *= _NormalStrength;
+                N.z = sqrt(1.0f - saturate(dot(N.xy, N.xy)));
+                N = mul(N, worldToTangent);
+
+                // Unpack DXT5nm tangent space tangent
+                float3 T;
+                T.xy = tex2D(_TangentTex, uv).wy * 2 - 1;
+                T.z = sqrt(1 - saturate(dot(T.xy, T.xy)));
+
+                T = mul(lerp(float3(1.0f, 0.0f, 0.0f), T, saturate(_NormalStrength)), worldToTangent);
                 
                 float3 albedo = tex2D(_AlbedoTex, uv).rgb;
 
                 float3 L = normalize(_WorldSpaceLightPos0.xyz); // Direction *towards* light source
                 float3 V = normalize(_WorldSpaceCameraPos.xyz - i.worldPos.xyz); // Direction *towards* camera
-                float3 X = normalize(i.tangent.xyz);
-                float3 Y = binormal;
+                float3 X = normalize(T);
+                float3 Y = normalize(cross(N, T) * i.tangent.w);
+
+                // return float4(Y.xyz, 1.0f);
 
                 BRDFResults reflection = DisneyBRDF(L, V, N, X, Y);
 
                 float3 output = _LightColor0 * (reflection.diffuse * albedo + reflection.specular + reflection.clearcoat);
                 output *= DotClamped(N, L);
+                output *= SHADOW_ATTENUATION(i);
 
                 return float4(max(0.0f, output), 1.0f);
             }
