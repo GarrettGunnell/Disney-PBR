@@ -9,6 +9,8 @@ Shader "Acerola/AcerolaBRDF" {
         _Metallic ("Metallic", Range(0.0, 1.0)) = 0
         _Subsurface ("Subsurface", Range(0.0, 1.0)) = 0
         _Specular ("Specular", Range(0.0, 2.0)) = 0.5
+        _RoughnessTex ("Roughness Map", 2D) = "" {}
+        _RoughnessMapMod ("Roughness Map Mod", Range(0.0, 1.0)) = 0.5
         _Roughness ("Roughness", Range(0.0, 1.0)) = 0.5
         _SpecularTint ("Specular Tint", Range(0.0, 1.0)) = 0.0
         _Anisotropic ("Anisotropic", Range(0.0, 1.0)) = 0.0
@@ -16,6 +18,9 @@ Shader "Acerola/AcerolaBRDF" {
         _SheenTint ("Sheen Tint", Range(0.0, 1.0)) = 0.5
         _ClearCoat ("Clear Coat", Range(0.0, 1.0)) = 0.0
         _ClearCoatGloss ("Clear Coat Gloss", Range(0.0, 1.0)) = 1.0
+        _SkyboxCube ("Skybox", Cube) = "" {}
+        _IndirectF0 ("Indirect Min Reflectance", Range(0.0, 1.0)) = 0.0
+        _IndirectF90 ("Indirect Max Reflectance", Range(0.0, 1.0)) = 0.0
     }
 
     SubShader {
@@ -27,9 +32,11 @@ Shader "Acerola/AcerolaBRDF" {
 
         #define PI 3.14159265f
 
-        sampler2D _AlbedoTex, _NormalTex, _TangentTex;
+        samplerCUBE _SkyboxCube;
+        sampler2D _AlbedoTex, _NormalTex, _TangentTex, _RoughnessTex;
         float3 _BaseColor;
         float _NormalStrength, _Roughness, _Metallic, _Subsurface, _Specular, _SpecularTint, _Anisotropic, _Sheen, _SheenTint, _ClearCoat, _ClearCoatGloss;
+        float _RoughnessMapMod, _IndirectF0, _IndirectF90;
 
         struct VertexData {
             float4 vertex : POSITION;
@@ -94,6 +101,7 @@ Shader "Acerola/AcerolaBRDF" {
             float3 N; // World space normal (unpacked from normal map)
             float3 X; // World space tangent (unpacked from tangent map)
             float3 Y; // World space bitangent
+            float roughness; // From uniform or texture map
         };
 
         struct BRDFResults {
@@ -126,7 +134,7 @@ Shader "Acerola/AcerolaBRDF" {
             float FL = SchlickFresnel(ndotl);
             float FV = SchlickFresnel(ndotv);
 
-            float Fss90 = ldoth * ldoth * _Roughness;
+            float Fss90 = ldoth * ldoth * i.roughness;
             float Fd90 = 0.5f + 2.0f * Fss90;
 
             float Fd = lerp(1.0f, Fd90, FL) * lerp(1.0f, Fd90, FV);
@@ -137,7 +145,7 @@ Shader "Acerola/AcerolaBRDF" {
             float ss = 1.25f * (Fss * (rcp(ndotl + ndotv) - 0.5f) + 0.5f);
 
             // Specular
-            float alpha = _Roughness;
+            float alpha = i.roughness;
             float alphaSquared = alpha * alpha;
 
             // Anisotropic Microfacet Normal Distribution (Normalized Anisotropic GTR gamma == 2)
@@ -147,7 +155,7 @@ Shader "Acerola/AcerolaBRDF" {
             float Ds = AnisotropicGTR2(ndoth, dot(H, i.X), dot(H, i.Y), alphaX, alphaY);
 
             // Geometric Attenuation
-            float GalphaSquared = sqr(0.5f + _Roughness * 0.5f);
+            float GalphaSquared = sqr(0.5f + i.roughness * 0.5f);
             float GalphaX = max(0.001f, GalphaSquared / aspectRatio);
             float GalphaY = max(0.001f, GalphaSquared * aspectRatio);
             float G = AnisotropicSmithGGX(ndotl, dot(i.L, i.X), dot(i.L, i.Y), GalphaX, GalphaY);
@@ -166,7 +174,7 @@ Shader "Acerola/AcerolaBRDF" {
             float Gr = SmithGGX(ndotl, ndotv, 0.25f);
 
             
-            output.diffuse = (1.0f / PI) * (lerp(Fd, ss, _Subsurface) + Fsheen) * (1 - _Metallic);
+            output.diffuse = (1.0f / PI) * (lerp(Fd, ss, _Subsurface) + Fsheen) * (1 - _Metallic) * (1 - F);
             output.specular = Ds * F * G;
             output.clearcoat = 0.25f * _ClearCoat * Gr * Fr * Dr;
 
@@ -239,14 +247,26 @@ Shader "Acerola/AcerolaBRDF" {
                 input.V = normalize(_WorldSpaceCameraPos.xyz - i.worldPos.xyz); // Direction *towards* camera
                 input.X = normalize(T);
                 input.Y = normalize(cross(N, T) * i.tangent.w);
+                input.roughness = saturate(_Roughness + tex2D(_RoughnessTex, uv).r * _RoughnessMapMod);
 
                 BRDFResults reflection = DisneyBRDF(input);
 
                 float3 output = _LightColor0 * (reflection.diffuse * albedo + reflection.specular + reflection.clearcoat);
                 output *= DotClamped(input.N, input.L);
                 output *= SHADOW_ATTENUATION(i);
+                output = max(0.0f, output);
 
-                return float4(max(0.0f, output), 1.0f);
+                float3 R = reflect(-input.V, input.N);
+                float FR = SchlickFresnel(DotClamped(input.N, input.V));
+                float F = lerp(_IndirectF0 * (1.0f - input.roughness), _IndirectF90 * (1.0f - input.roughness), FR);
+
+                float3 indirectReflection = texCUBElod(_SkyboxCube, float4(R, 0)).rgb;
+
+                float3 indirectLight = texCUBElod(_SkyboxCube, float4(R, 5)).rgb;
+
+                output += albedo * indirectLight * (1.0f - F) + indirectReflection * F;
+
+                return float4(output, 1.0f);
             }
 
             ENDCG
@@ -318,6 +338,7 @@ Shader "Acerola/AcerolaBRDF" {
                 input.V = normalize(_WorldSpaceCameraPos.xyz - i.worldPos.xyz); // Direction *towards* camera
                 input.X = normalize(T);
                 input.Y = normalize(cross(N, T) * i.tangent.w);
+                input.roughness = max(_Roughness, tex2D(_RoughnessTex, uv).r);
 
                 BRDFResults reflection = DisneyBRDF(input);
 
