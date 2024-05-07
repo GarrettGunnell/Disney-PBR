@@ -160,7 +160,7 @@ Shader "Acerola/DisneyBRDF" {
             
             output.diffuse = (1.0f / PI) * (lerp(Fd, ss, _Subsurface) + Fsheen) * (1 - _Metallic);
             output.specular = Ds * F * G;
-            output.clearcoat = _ClearCoat * Gr * Fr * Dr;
+            output.clearcoat = 0.25f * _ClearCoat * Gr * Fr * Dr;
 
             return output;
         }

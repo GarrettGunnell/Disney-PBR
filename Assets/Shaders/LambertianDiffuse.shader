@@ -72,11 +72,7 @@ Shader "Acerola/LambertianDiffuse" {
 
                 float shadow = SHADOW_ATTENUATION(i);
 
-                float ndotl2 = DotClamped(normalize(float3(1, -1, 0.15)), normal);
-
-
-
-                return float4(col * ndotl * shadow * float3(1.10f, 0.95f, 0.75f) + ndotl2 * col * 0.5f * float3(0.75f, 1.0f, 0.75f), 1.0f);
+                return float4(_LightColor0 * col * ndotl * shadow, 1.0f);
             }
 
             ENDCG
