@@ -63,21 +63,19 @@ Shader "Acerola/Disney" {
             return x2 * x2 * x; // While this is equivalent to pow(1 - x, 5) it is two less mult instructions
         }
 
-        float GGX(float alphaSquared, float ndoth) {
-            float b = ((alphaSquared - 1.0f) * ndoth * ndoth + 1.0f);
-            return alphaSquared / (PI * b * b);
-        }
-
+        // Isotropic Generalized Trowbridge Reitz with gamma == 1
         float GTR1(float ndoth, float a) {
             float a2 = a * a;
             float t = 1.0f + (a2 - 1.0f) * ndoth * ndoth;
             return (a2 - 1.0f) / (PI * log(a2) * t);
         }
 
+        // Anisotropic Generalized Trowbridge Reitz with gamma == 2. This is equal to the popular GGX distribution.
         float AnisotropicGTR2(float ndoth, float hdotx, float hdoty, float ax, float ay) {
             return rcp(PI * ax * ay * sqr(sqr(hdotx / ax) + sqr(hdoty / ay) + sqr(ndoth)));
         }
 
+        // Isotropic Geometric Attenuation Function for GGX. This is technically different from what Disney uses, but it's basically the same.
         float SmithGGX(float alphaSquared, float ndotl, float ndotv) {
             float a = ndotv * sqrt(alphaSquared + ndotl * (ndotl - alphaSquared * ndotl));
             float b = ndotl * sqrt(alphaSquared + ndotv * (ndotv - alphaSquared * ndotv));
@@ -85,6 +83,7 @@ Shader "Acerola/Disney" {
             return 0.5f / (a + b);
         }
 
+        // Anisotropic Geometric Attenuation Function for GGX.
         float AnisotropicSmithGGX(float ndots, float sdotx, float sdoty, float ax, float ay) {
             return rcp(ndots + sqrt(sqr(sdotx * ax) + sqr(sdoty * ay) + sqr(ndots)));
         }
@@ -230,8 +229,6 @@ Shader "Acerola/Disney" {
                 float3 X = normalize(T);
                 float3 Y = normalize(cross(N, T) * i.tangent.w);
 
-                // return float4(Y.xyz, 1.0f);
-
                 BRDFResults reflection = DisneyBRDF(L, V, N, X, Y);
 
                 float3 output = _LightColor0 * (reflection.diffuse * albedo + reflection.specular + reflection.clearcoat);
@@ -307,8 +304,6 @@ Shader "Acerola/Disney" {
                 float3 V = normalize(_WorldSpaceCameraPos.xyz - i.worldPos.xyz); // Direction *towards* camera
                 float3 X = normalize(T);
                 float3 Y = normalize(cross(N, T) * i.tangent.w);
-
-                // return float4(Y.xyz, 1.0f);
 
                 BRDFResults reflection = DisneyBRDF(L, V, N, X, Y);
 
