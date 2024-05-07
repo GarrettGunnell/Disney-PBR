@@ -4,14 +4,9 @@ Shader "Acerola/BlinnPhong" {
         _AlbedoTex ("Albedo", 2D) = "" {}
         _NormalTex ("Normal", 2D) = "" {}
         _NormalStrength ("Normal Strength", Range(0.0, 3.0)) = 1.0
-        _ShininessTex ("Shininess", 2D) = "" {}
-        _DirectSpecularPeak ("Specular Peak", Range(0.0, 200.0)) = 20.0
+        _DirectSpecularPeak ("Specular Peak", Range(0.001, 2000.0)) = 20.0
         _SpecularStrength ("Specular Strength", Range(0.0, 2.0)) = 1.0
         _F0 ("Direct Fresnel", Range(0.0, 2.0)) = 0.028
-        _SkyboxCube ("Skybox", Cube) = "" {}
-        _IndirectSpecularPeak ("Indirect Specular Peak", Range(0.0, 100.0)) = 20.0
-        _IndirectSpecularStrength ("Indirect Specular Strength", Range(0.0, 2.0)) = 1.0
-        _F1 ("Indirect Fresnel", Range(0.0, 2.0)) = 0.028
     }
 
     SubShader {
@@ -31,8 +26,7 @@ Shader "Acerola/BlinnPhong" {
             return x2 * x2 * x; // While this is equivalent to pow(1 - x, 5) it is two less mult instructions
         }
 
-        sampler2D _AlbedoTex, _NormalTex, _ShininessTex;
-        samplerCUBE _SkyboxCube;
+        sampler2D _AlbedoTex, _NormalTex;
         float _NormalStrength, _DirectSpecularPeak, _IndirectSpecularPeak, _SpecularStrength, _IndirectSpecularStrength, _F0, _F1;
 
         struct VertexData {
@@ -76,13 +70,6 @@ Shader "Acerola/BlinnPhong" {
             output.specular = saturate(spec * _SpecularStrength);
 
             return output;
-
-            // float3 indirectDiffuse = albedo * texCUBElod(_SkyboxCube, float4(N, 5)).rgb * 1.0f;
-
-
-            // float3 indirectSpecular = texCUBElod(_SkyboxCube, float4(R, 0)).rgb * _IndirectSpecularStrength;
-            // float3 indirectLight = indirectDiffuse + indirectSpecular;
-
         }
 
         ENDCG
