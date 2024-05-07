@@ -1,4 +1,4 @@
-Shader "Acerola/Disney" {
+Shader "Acerola/DisneyBRDF" {
 
     Properties {
         _AlbedoTex ("Albedo", 2D) = "" {}
