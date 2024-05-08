@@ -176,7 +176,7 @@ Shader "Acerola/AcerolaBRDF" {
             
             output.diffuse = (1.0f / PI) * (lerp(Fd, ss, _Subsurface) + Fsheen) * (1 - _Metallic) * (1 - F);
             output.specular = Ds * F * G;
-            output.clearcoat = 0.25f * _ClearCoat * Gr * Fr * Dr;
+            output.clearcoat = max(0.0f, 0.25f * _ClearCoat * Gr * Fr * Dr);
 
             return output;
         }
