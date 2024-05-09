@@ -7,10 +7,17 @@ using TMPro;
 public class MaterialWizard : MonoBehaviour {
     public Shader shader;
 
-    public TMP_Dropdown materialDropdown;
+    public TMP_Dropdown materialDropdown, textureSetDropdown, skyboxDropdown;
     // Great code
     public Slider redSlider, greenSlider, blueSlider, normalScaleSlider, metallicSlider, subsurfaceSlider, specularSlider,
-    specularTintSlider, roughnessSlider, anisotropicSlider, sheenSlider, sheenTintSlider, clearCoatSlider, clearCoatGlossSlider;
+    specularTintSlider, roughnessSlider, anisotropicSlider, sheenSlider, sheenTintSlider, clearCoatSlider, clearCoatGlossSlider,
+    indirectMinStrengthSlider, indirectMaxStrengthSlider, blendSlider;
+
+    public Texture skybox1, skybox2, skybox3, skybox4;
+    public Material skyboxMaterial1, skyboxMaterial2, skyboxMaterial3, skyboxMaterial4;
+    public Texture albedo1, normals1, tangents1, roughness1;
+    public Texture albedo2, normals2, tangents2, roughness2;
+    public Texture albedo3, normals3, tangents3, roughness3;
 
     private class MaterialInfo {
         public int textureSet;
@@ -53,10 +60,60 @@ public class MaterialWizard : MonoBehaviour {
         return new Vector3(redSlider.value, greenSlider.value, blueSlider.value);
     }
 
+    private Texture GetSkyboxTex(int i) {
+        if (i == 0) return skybox1;
+        if (i == 1) return skybox2;
+        if (i == 2) return skybox3;
+        if (i == 3) return skybox4;
+
+        return skybox1;
+    }
+
+    private Material GetSkyboxMaterial(int i) {
+        if (i == 0) return skyboxMaterial1;
+        if (i == 1) return skyboxMaterial2;
+        if (i == 2) return skyboxMaterial3;
+        if (i == 3) return skyboxMaterial4;
+
+        return skyboxMaterial1;
+    }
+
+    private Texture GetAlbedoTex(int i) {
+        if (i == 1) return albedo1;
+        if (i == 2) return albedo2;
+        if (i == 3) return albedo3;
+
+        return albedo1;
+    }
+
+    private Texture GetNormalsTex(int i) {
+        if (i == 1) return normals1;
+        if (i == 2) return normals2;
+        if (i == 3) return normals3;
+
+        return normals1;
+    }
+
+    private Texture GetTangentsTex(int i) {
+        if (i == 1) return tangents1;
+        if (i == 2) return tangents2;
+        if (i == 3) return tangents3;
+
+        return tangents1;
+    }
+
+    private Texture GetRoughnessTex(int i) {
+        if (i == 1) return roughness1;
+        if (i == 2) return roughness2;
+        if (i == 3) return roughness3;
+
+        return roughness1;
+    }
+
     void FillMaterialInfo() {
         MaterialInfo activeMaterialInfo = materialDropdown.value == 0 ? materialInfo1 : materialInfo2;
 
-        activeMaterialInfo.textureSet = 0;
+        activeMaterialInfo.textureSet = textureSetDropdown.value;
         activeMaterialInfo.baseColor = GetColorFromUI();
         activeMaterialInfo.normalScale = normalScaleSlider.value;
         activeMaterialInfo.metallic = metallicSlider.value;
@@ -74,6 +131,7 @@ public class MaterialWizard : MonoBehaviour {
     void SwapMaterials() {
         MaterialInfo activeMaterialInfo = materialDropdown.value == 0 ? materialInfo1 : materialInfo2;
 
+        textureSetDropdown.value = activeMaterialInfo.textureSet;
         redSlider.value = activeMaterialInfo.baseColor.x;
         greenSlider.value = activeMaterialInfo.baseColor.y;
         blueSlider.value = activeMaterialInfo.baseColor.z;
@@ -92,8 +150,27 @@ public class MaterialWizard : MonoBehaviour {
         cachedMaterialIndex = materialDropdown.value;
     }
 
+    MaterialInfo BlendMaterials() {
+        MaterialInfo i = new MaterialInfo();
+
+        i.baseColor = Vector3.Lerp(materialInfo1.baseColor, materialInfo2.baseColor, blendSlider.value);
+        i.normalScale = Mathf.Lerp(materialInfo1.normalScale, materialInfo2.normalScale, blendSlider.value);
+        i.metallic = Mathf.Lerp(materialInfo1.metallic, materialInfo2.metallic, blendSlider.value);
+        i.subsurface = Mathf.Lerp(materialInfo1.subsurface, materialInfo2.subsurface, blendSlider.value);
+        i.specular = Mathf.Lerp(materialInfo1.specular, materialInfo2.specular, blendSlider.value);
+        i.specularTint = Mathf.Lerp(materialInfo1.specularTint, materialInfo2.specularTint, blendSlider.value);
+        i.minimumRoughness = Mathf.Lerp(materialInfo1.minimumRoughness, materialInfo2.minimumRoughness, blendSlider.value);
+        i.anisotropic = Mathf.Lerp(materialInfo1.anisotropic, materialInfo2.anisotropic, blendSlider.value);
+        i.sheen = Mathf.Lerp(materialInfo1.sheen, materialInfo2.sheen, blendSlider.value);
+        i.sheenTint = Mathf.Lerp(materialInfo1.sheenTint, materialInfo2.sheenTint, blendSlider.value);
+        i.clearCoat = Mathf.Lerp(materialInfo1.clearCoat, materialInfo2.clearCoat, blendSlider.value);
+        i.clearCoatGloss = Mathf.Lerp(materialInfo1.clearCoatGloss, materialInfo2.clearCoatGloss, blendSlider.value);
+
+        return i;
+    }
+
     void SetUniforms() {
-        MaterialInfo activeMaterialInfo = materialDropdown.value == 0 ? materialInfo1 : materialInfo2;
+        MaterialInfo activeMaterialInfo = BlendMaterials();
 
         material.SetVector("_BaseColor", activeMaterialInfo.baseColor);
         material.SetFloat("_NormalStrength", activeMaterialInfo.normalScale);
@@ -107,6 +184,16 @@ public class MaterialWizard : MonoBehaviour {
         material.SetFloat("_SheenTint", activeMaterialInfo.sheenTint);
         material.SetFloat("_ClearCoat", activeMaterialInfo.clearCoat);
         material.SetFloat("_ClearCoatGloss", activeMaterialInfo.clearCoatGloss);
+        material.SetFloat("_IndirectF0", indirectMinStrengthSlider.value);
+        material.SetFloat("_IndirectF90", indirectMaxStrengthSlider.value);
+
+        material.SetInt("_TextureSetIndex", materialInfo1.textureSet);
+        material.SetTexture("_AlbedoTex", GetAlbedoTex(materialInfo1.textureSet));
+        material.SetTexture("_NormalTex", GetNormalsTex(materialInfo1.textureSet));
+        material.SetTexture("_TangentTex", GetTangentsTex(materialInfo1.textureSet));
+        material.SetTexture("_RoughnessTex", GetRoughnessTex(materialInfo1.textureSet));
+        RenderSettings.skybox = GetSkyboxMaterial(skyboxDropdown.value);
+        material.SetTexture("_SkyboxCube", GetSkyboxTex(skyboxDropdown.value));
     }
 
     void OnEnable() {

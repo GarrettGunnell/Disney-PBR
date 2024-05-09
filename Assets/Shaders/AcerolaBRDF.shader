@@ -21,6 +21,7 @@ Shader "Acerola/AcerolaBRDF" {
         _SkyboxCube ("Skybox", Cube) = "" {}
         _IndirectF0 ("Indirect Min Reflectance", Range(0.0, 1.0)) = 0.0
         _IndirectF90 ("Indirect Max Reflectance", Range(0.0, 1.0)) = 0.0
+        [HideInInspector]_TextureSetIndex ("Texture Set Index", Range(1, 1)) = 1
     }
 
     SubShader {
@@ -37,6 +38,7 @@ Shader "Acerola/AcerolaBRDF" {
         float3 _BaseColor;
         float _NormalStrength, _Roughness, _Metallic, _Subsurface, _Specular, _SpecularTint, _Anisotropic, _Sheen, _SheenTint, _ClearCoat, _ClearCoatGloss;
         float _RoughnessMapMod, _IndirectF0, _IndirectF90;
+        int _TextureSetIndex;
 
         struct VertexData {
             float4 vertex : POSITION;
@@ -102,6 +104,7 @@ Shader "Acerola/AcerolaBRDF" {
             float3 X; // World space tangent (unpacked from tangent map)
             float3 Y; // World space bitangent
             float roughness; // From uniform or texture map
+            float3 baseColor;
         };
 
         struct BRDFResults {
@@ -123,10 +126,10 @@ Shader "Acerola/AcerolaBRDF" {
             float ndoth = DotClamped(i.N, H);
             float ldoth = DotClamped(i.L, H);
 
-            float Cdlum = luminance(_BaseColor);
+            float Cdlum = luminance(i.baseColor);
 
-            float3 Ctint = Cdlum > 0.0f ? _BaseColor / Cdlum : 1.0f;
-            float3 Cspec0 = lerp(_Specular * 0.08f * lerp(1.0f, Ctint, _SpecularTint), _BaseColor, _Metallic);
+            float3 Ctint = Cdlum > 0.0f ? i.baseColor / Cdlum : 1.0f;
+            float3 Cspec0 = lerp(_Specular * 0.08f * lerp(1.0f, Ctint, _SpecularTint), i.baseColor, _Metallic);
             float3 Csheen = lerp(1.0f, Ctint, _SheenTint);
 
 
@@ -174,7 +177,7 @@ Shader "Acerola/AcerolaBRDF" {
             float Gr = SmithGGX(ndotl, ndotv, 0.25f);
 
             
-            output.diffuse = (1.0f / PI) * (lerp(Fd, ss, _Subsurface) * _BaseColor + Fsheen) * (1 - _Metallic) * (1 - F);
+            output.diffuse = (1.0f / PI) * (lerp(Fd, ss, _Subsurface) * i.baseColor + Fsheen) * (1 - _Metallic) * (1 - F);
             output.specular = saturate(Ds * F * G);
             output.clearcoat = saturate(0.25f * _ClearCoat * Gr * Fr * Dr);
 
@@ -230,15 +233,22 @@ Shader "Acerola/AcerolaBRDF" {
                 N.xy *= _NormalStrength;
                 N.z = sqrt(1.0f - saturate(dot(N.xy, N.xy)));
                 N = mul(N, worldToTangent);
+                if (_TextureSetIndex == 0) N = i.normal;
 
                 // Unpack DXT5nm tangent space tangent
                 float3 T;
                 T.xy = tex2D(_TangentTex, uv).wy * 2 - 1;
                 T.z = sqrt(1 - saturate(dot(T.xy, T.xy)));
-
+                
                 T = mul(lerp(float3(1.0f, 0.0f, 0.0f), T, saturate(_NormalStrength)), worldToTangent);
+                if (_TextureSetIndex == 0) T = i.tangent.xyz;
                 
                 float3 albedo = tex2D(_AlbedoTex, uv).rgb;
+                if (_TextureSetIndex == 0) albedo = 1.0f;
+                albedo *= _BaseColor;
+
+                float roughnessMap = tex2D(_RoughnessTex, uv).r;
+                if (_TextureSetIndex == 0) roughnessMap = 0.0f;
 
                 BRDFInput input;
 
@@ -247,24 +257,36 @@ Shader "Acerola/AcerolaBRDF" {
                 input.V = normalize(_WorldSpaceCameraPos.xyz - i.worldPos.xyz); // Direction *towards* camera
                 input.X = normalize(T);
                 input.Y = normalize(cross(N, T) * i.tangent.w);
-                input.roughness = saturate(_Roughness + tex2D(_RoughnessTex, uv).r * _RoughnessMapMod);
+                input.roughness = max(_Roughness, roughnessMap);
+                input.baseColor = albedo;
+
+                // return input.roughness;
 
                 BRDFResults reflection = DisneyBRDF(input);
 
-                float3 output = _LightColor0 * (reflection.diffuse * albedo + reflection.specular + reflection.clearcoat);
+                float3 output = _LightColor0 * (reflection.diffuse + reflection.specular + reflection.clearcoat);
                 output *= DotClamped(input.N, input.L);
                 output *= SHADOW_ATTENUATION(i);
                 output = max(0.0f, output);
 
                 float3 R = reflect(-input.V, input.N);
                 float FR = SchlickFresnel(DotClamped(input.N, input.V));
-                float F = lerp(_IndirectF0 * (1.0f - input.roughness), _IndirectF90 * (1.0f - input.roughness), FR);
+                float F = saturate(lerp(_IndirectF0, max(_IndirectF0, _IndirectF90 - input.roughness * input.roughness), FR));
 
-                float3 indirectReflection = texCUBElod(_SkyboxCube, float4(R, 0)).rgb;
+                float skyboxMip = (input.roughness) * 8.0f;
+                float mip1 = floor(skyboxMip);
+                float mip2 = ceil(skyboxMip);
+                float t = frac(skyboxMip);
 
-                float3 indirectLight = texCUBElod(_SkyboxCube, float4(R, 5)).rgb;
 
-                output += albedo * indirectLight * (1.0f - F) + indirectReflection * F;
+                float3 indirectReflection1 = texCUBElod(_SkyboxCube, float4(R, mip1)).rgb;
+                float3 indirectReflection2 = texCUBElod(_SkyboxCube, float4(R, mip2)).rgb;
+                float3 indirectReflection = lerp(indirectReflection1, indirectReflection2, t);
+
+                float3 indirectLight = texCUBElod(_SkyboxCube, float4(R, 11)).rgb;
+
+                output += albedo * indirectLight * (1.0f - F) * (1 - _Metallic) + indirectReflection * F;
+
 
                 return float4(output, 1.0f);
             }
@@ -330,6 +352,7 @@ Shader "Acerola/AcerolaBRDF" {
                 T = mul(lerp(float3(1.0f, 0.0f, 0.0f), T, saturate(_NormalStrength)), worldToTangent);
                 
                 float3 albedo = tex2D(_AlbedoTex, uv).rgb;
+                albedo *= _BaseColor;
 
                 BRDFInput input;
 
@@ -339,6 +362,7 @@ Shader "Acerola/AcerolaBRDF" {
                 input.X = normalize(T);
                 input.Y = normalize(cross(N, T) * i.tangent.w);
                 input.roughness = max(_Roughness, tex2D(_RoughnessTex, uv).r);
+                input.baseColor = albedo;
 
                 BRDFResults reflection = DisneyBRDF(input);
 
