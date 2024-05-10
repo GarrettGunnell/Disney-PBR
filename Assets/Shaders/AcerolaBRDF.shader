@@ -21,7 +21,8 @@ Shader "Acerola/AcerolaBRDF" {
         _SkyboxCube ("Skybox", Cube) = "" {}
         _IndirectF0 ("Indirect Min Reflectance", Range(0.0, 1.0)) = 0.0
         _IndirectF90 ("Indirect Max Reflectance", Range(0.0, 1.0)) = 0.0
-        [HideInInspector]_TextureSetIndex ("Texture Set Index", Range(1, 1)) = 1
+        [HideInInspector]_TextureSetIndex1 ("Texture Set Index", Range(1, 1)) = 1
+        [HideInInspector]_BlendFactor ("_", Range(1, 1)) = 0
     }
 
     SubShader {
@@ -35,10 +36,12 @@ Shader "Acerola/AcerolaBRDF" {
 
         samplerCUBE _SkyboxCube;
         sampler2D _AlbedoTex, _NormalTex, _TangentTex, _RoughnessTex;
+        sampler2D _AlbedoTex2, _NormalTex2, _TangentTex2, _RoughnessTex2;
         float3 _BaseColor;
         float _NormalStrength, _Roughness, _Metallic, _Subsurface, _Specular, _SpecularTint, _Anisotropic, _Sheen, _SheenTint, _ClearCoat, _ClearCoatGloss;
         float _RoughnessMapMod, _IndirectF0, _IndirectF90;
-        int _TextureSetIndex;
+        int _TextureSetIndex1, _TextureSetIndex2;
+        float _BlendFactor;
 
         struct VertexData {
             float4 vertex : POSITION;
@@ -129,7 +132,7 @@ Shader "Acerola/AcerolaBRDF" {
             float Cdlum = luminance(i.baseColor);
 
             float3 Ctint = Cdlum > 0.0f ? i.baseColor / Cdlum : 1.0f;
-            float3 Cspec0 = lerp(_Specular * 0.08f * lerp(1.0f, Ctint, _SpecularTint), i.baseColor, _Metallic);
+            float3 Cspec0 = lerp(_Specular * 0.08f * lerp(1.0f, Ctint, _SpecularTint), i.baseColor * (1.0f + _Specular), _Metallic);
             float3 Csheen = lerp(1.0f, Ctint, _SheenTint);
 
 
@@ -179,6 +182,7 @@ Shader "Acerola/AcerolaBRDF" {
             
             output.diffuse = (1.0f / PI) * (lerp(Fd, ss, _Subsurface) * i.baseColor + Fsheen) * (1 - _Metallic) * (1 - F);
             output.specular = saturate(Ds * F * G);
+            // output.specular = F;
             output.clearcoat = saturate(0.25f * _ClearCoat * Gr * Fr * Dr);
 
             return output;
@@ -233,7 +237,7 @@ Shader "Acerola/AcerolaBRDF" {
                 N.xy *= _NormalStrength;
                 N.z = sqrt(1.0f - saturate(dot(N.xy, N.xy)));
                 N = mul(N, worldToTangent);
-                if (_TextureSetIndex == 0) N = i.normal;
+                if (_TextureSetIndex1 == 0) N = i.normal;
 
                 // Unpack DXT5nm tangent space tangent
                 float3 T;
@@ -241,24 +245,53 @@ Shader "Acerola/AcerolaBRDF" {
                 T.z = sqrt(1 - saturate(dot(T.xy, T.xy)));
                 
                 T = mul(lerp(float3(1.0f, 0.0f, 0.0f), T, saturate(_NormalStrength)), worldToTangent);
-                if (_TextureSetIndex == 0) T = i.tangent.xyz;
+                if (_TextureSetIndex1 == 0) T = i.tangent.xyz;
                 
                 float3 albedo = tex2D(_AlbedoTex, uv).rgb;
-                if (_TextureSetIndex == 0) albedo = 1.0f;
+                if (_TextureSetIndex1 == 0) albedo = 1.0f;
                 albedo *= _BaseColor;
 
                 float roughnessMap = tex2D(_RoughnessTex, uv).r;
-                if (_TextureSetIndex == 0) roughnessMap = 0.0f;
+                if (_TextureSetIndex1 == 0) roughnessMap = 0.0f;
+
+                // Unpack DXT5nm tangent space normal
+                float4 packedNormal2 = tex2D(_NormalTex2, uv);
+                packedNormal2.w *= packedNormal2.x;
+
+                float3 N2;
+                N2.xy = packedNormal2.wy * 2.0f - 1.0f;
+                N2.xy *= _NormalStrength;
+                N2.z = sqrt(1.0f - saturate(dot(N2.xy, N2.xy)));
+                N2 = mul(N2, worldToTangent);
+                if (_TextureSetIndex2 == 0) N2 = i.normal;
+
+                // Unpack DXT5nm tangent space tangent
+                float3 T2;
+                T2.xy = tex2D(_TangentTex2, uv).wy * 2 - 1;
+                T2.z = sqrt(1 - saturate(dot(T2.xy, T2.xy)));
+                
+                T2 = mul(lerp(float3(1.0f, 0.0f, 0.0f), T2, saturate(_NormalStrength)), worldToTangent);
+                if (_TextureSetIndex2 == 0) T2 = i.tangent.xyz;
+                
+                float3 albedo2 = tex2D(_AlbedoTex2, uv).rgb;
+                if (_TextureSetIndex2 == 0) albedo2 = 1.0f;
+                albedo2 *= _BaseColor;
+
+                float roughnessMap2 = tex2D(_RoughnessTex2, uv).r;
+                if (_TextureSetIndex2 == 0) roughnessMap2 = 0.0f;
 
                 BRDFInput input;
 
-                input.N = N;
+                float3 finalNormal = normalize(lerp(N, N2, _BlendFactor));
+                float3 finalTangent = normalize(lerp(T, T2, _BlendFactor));
+
+                input.N = finalNormal;
                 input.L = normalize(_WorldSpaceLightPos0.xyz); // Direction *towards* light source
                 input.V = normalize(_WorldSpaceCameraPos.xyz - i.worldPos.xyz); // Direction *towards* camera
-                input.X = normalize(T);
-                input.Y = normalize(cross(N, T) * i.tangent.w);
-                input.roughness = max(_Roughness, roughnessMap);
-                input.baseColor = albedo;
+                input.X = finalTangent;
+                input.Y = (cross(finalNormal, finalTangent) * i.tangent.w); // Bitangent
+                input.roughness = max(_Roughness, lerp(roughnessMap, roughnessMap2, _BlendFactor));
+                input.baseColor = lerp(albedo, albedo2, _BlendFactor);
 
                 // return input.roughness;
 
@@ -269,24 +302,22 @@ Shader "Acerola/AcerolaBRDF" {
                 output *= SHADOW_ATTENUATION(i);
                 output = max(0.0f, output);
 
-                float3 R = reflect(-input.V, input.N);
-                float FR = SchlickFresnel(DotClamped(input.N, input.V));
-                float F = saturate(lerp(_IndirectF0, max(_IndirectF0, _IndirectF90 - input.roughness * input.roughness), FR));
+                float indirectRoughness = max(_Roughness, roughnessMap);
 
-                float skyboxMip = (input.roughness) * 8.0f;
+                float skyboxMip = lerp(0.0f, 10.0f, pow(indirectRoughness, rcp(2.0f)));
                 float mip1 = floor(skyboxMip);
                 float mip2 = ceil(skyboxMip);
                 float t = frac(skyboxMip);
 
+                input.L = finalNormal;
 
-                float3 indirectReflection1 = texCUBElod(_SkyboxCube, float4(R, mip1)).rgb;
-                float3 indirectReflection2 = texCUBElod(_SkyboxCube, float4(R, mip2)).rgb;
-                float3 indirectReflection = lerp(indirectReflection1, indirectReflection2, t);
+                BRDFResults indirectReflection = DisneyBRDF(input);
 
-                float3 indirectLight = texCUBElod(_SkyboxCube, float4(R, 11)).rgb;
-
-                output += albedo * indirectLight * (1.0f - F) * (1 - _Metallic) + indirectReflection * F;
-
+                float3 indirectReflection1 = texCUBElod(_SkyboxCube, float4(finalNormal, mip1)).rgb;
+                float3 indirectReflection2 = texCUBElod(_SkyboxCube, float4(finalNormal, mip2)).rgb;
+                float3 indirectReflectionColor = lerp(indirectReflection1, indirectReflection2, t) * lerp(1.0f, input.baseColor, _Metallic);
+                
+                output += indirectReflectionColor * max(_IndirectF0, (indirectReflection.diffuse + indirectReflection.specular + indirectReflection.clearcoat) * _IndirectF90);
 
                 return float4(output, 1.0f);
             }

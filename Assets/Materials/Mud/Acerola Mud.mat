@@ -108,6 +108,7 @@ Material:
     - _SpecularTint: 0
     - _SrcBlend: 1
     - _Subsurface: 0
+    - _TextureSetIndex: 1
     - _UVSec: 0
     - _ZWrite: 1
     m_Colors:

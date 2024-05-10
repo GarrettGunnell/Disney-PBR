@@ -18,6 +18,7 @@ public class MaterialWizard : MonoBehaviour {
     public Texture albedo1, normals1, tangents1, roughness1;
     public Texture albedo2, normals2, tangents2, roughness2;
     public Texture albedo3, normals3, tangents3, roughness3;
+    public Texture albedo4, normals4, tangents4, roughness4;
 
     private class MaterialInfo {
         public int textureSet;
@@ -82,6 +83,7 @@ public class MaterialWizard : MonoBehaviour {
         if (i == 1) return albedo1;
         if (i == 2) return albedo2;
         if (i == 3) return albedo3;
+        if (i == 4) return albedo4;
 
         return albedo1;
     }
@@ -90,6 +92,7 @@ public class MaterialWizard : MonoBehaviour {
         if (i == 1) return normals1;
         if (i == 2) return normals2;
         if (i == 3) return normals3;
+        if (i == 4) return normals4;
 
         return normals1;
     }
@@ -98,6 +101,7 @@ public class MaterialWizard : MonoBehaviour {
         if (i == 1) return tangents1;
         if (i == 2) return tangents2;
         if (i == 3) return tangents3;
+        if (i == 4) return tangents4;
 
         return tangents1;
     }
@@ -106,6 +110,7 @@ public class MaterialWizard : MonoBehaviour {
         if (i == 1) return roughness1;
         if (i == 2) return roughness2;
         if (i == 3) return roughness3;
+        if (i == 4) return roughness4;
 
         return roughness1;
     }
@@ -130,6 +135,7 @@ public class MaterialWizard : MonoBehaviour {
 
     void SwapMaterials() {
         MaterialInfo activeMaterialInfo = materialDropdown.value == 0 ? materialInfo1 : materialInfo2;
+        blendSlider.value = materialDropdown.value;
 
         textureSetDropdown.value = activeMaterialInfo.textureSet;
         redSlider.value = activeMaterialInfo.baseColor.x;
@@ -187,11 +193,17 @@ public class MaterialWizard : MonoBehaviour {
         material.SetFloat("_IndirectF0", indirectMinStrengthSlider.value);
         material.SetFloat("_IndirectF90", indirectMaxStrengthSlider.value);
 
-        material.SetInt("_TextureSetIndex", materialInfo1.textureSet);
+        material.SetInt("_TextureSetIndex1", materialInfo1.textureSet);
+        material.SetInt("_TextureSetIndex2", materialInfo2.textureSet);
+        material.SetFloat("_BlendFactor", blendSlider.value);
         material.SetTexture("_AlbedoTex", GetAlbedoTex(materialInfo1.textureSet));
         material.SetTexture("_NormalTex", GetNormalsTex(materialInfo1.textureSet));
         material.SetTexture("_TangentTex", GetTangentsTex(materialInfo1.textureSet));
         material.SetTexture("_RoughnessTex", GetRoughnessTex(materialInfo1.textureSet));
+        material.SetTexture("_AlbedoTex2", GetAlbedoTex(materialInfo2.textureSet));
+        material.SetTexture("_NormalTex2", GetNormalsTex(materialInfo2.textureSet));
+        material.SetTexture("_TangentTex2", GetTangentsTex(materialInfo2.textureSet));
+        material.SetTexture("_RoughnessTex2", GetRoughnessTex(materialInfo2.textureSet));
         RenderSettings.skybox = GetSkyboxMaterial(skyboxDropdown.value);
         material.SetTexture("_SkyboxCube", GetSkyboxTex(skyboxDropdown.value));
     }
