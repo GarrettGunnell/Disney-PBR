@@ -172,7 +172,7 @@ Shader "Acerola/AcerolaBRDF" {
             float3 F = lerp(Cspec0, 1.0f, FH);
 
             // Sheen
-            float3 Fsheen = FH * _Sheen * Csheen;
+            float3 Fsheen = lerp(Cspec0, 1.0f, SchlickFresnel(ndotv)) * _Sheen * Csheen;
 
             // Clearcoat (Hard Coded Index Of Refraction -> 1.5f -> F0 -> 0.04)
             float Dr = GTR1(ndoth, lerp(0.1f, 0.001f, _ClearCoatGloss)); // Normalized Isotropic GTR Gamma == 1
