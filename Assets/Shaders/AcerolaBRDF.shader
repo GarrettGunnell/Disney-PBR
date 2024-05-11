@@ -35,6 +35,7 @@ Shader "Acerola/AcerolaBRDF" {
         #define PI 3.14159265f
 
         samplerCUBE _SkyboxCube;
+        float _SkyboxIntensity;
         sampler2D _AlbedoTex, _NormalTex, _TangentTex, _RoughnessTex;
         sampler2D _AlbedoTex2, _NormalTex2, _TangentTex2, _RoughnessTex2;
         float3 _BaseColor;
@@ -317,7 +318,8 @@ Shader "Acerola/AcerolaBRDF" {
                 float3 indirectReflection2 = texCUBElod(_SkyboxCube, float4(finalNormal, mip2)).rgb;
                 float3 indirectReflectionColor = lerp(indirectReflection1, indirectReflection2, t) * lerp(1.0f, input.baseColor, _Metallic);
                 
-                output += indirectReflectionColor * max(_IndirectF0, (indirectReflection.diffuse + indirectReflection.specular + indirectReflection.clearcoat) * _IndirectF90);
+                output += _SkyboxIntensity * indirectReflectionColor * (indirectReflection.diffuse + max(_IndirectF0, indirectReflection.specular * _IndirectF90) + indirectReflection.clearcoat);
+                
 
                 return float4(output, 1.0f);
             }

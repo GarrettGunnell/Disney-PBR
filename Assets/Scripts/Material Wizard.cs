@@ -11,7 +11,7 @@ public class MaterialWizard : MonoBehaviour {
     // Great code
     public Slider redSlider, greenSlider, blueSlider, normalScaleSlider, metallicSlider, subsurfaceSlider, specularSlider,
     specularTintSlider, roughnessSlider, anisotropicSlider, sheenSlider, sheenTintSlider, clearCoatSlider, clearCoatGlossSlider,
-    indirectMinStrengthSlider, indirectMaxStrengthSlider, blendSlider;
+    indirectMinStrengthSlider, indirectMaxStrengthSlider, blendSlider, skyboxIntensitySlider;
 
     public Texture skybox1, skybox2, skybox3, skybox4;
     public Material skyboxMaterial1, skyboxMaterial2, skyboxMaterial3, skyboxMaterial4;
@@ -19,6 +19,7 @@ public class MaterialWizard : MonoBehaviour {
     public Texture albedo2, normals2, tangents2, roughness2;
     public Texture albedo3, normals3, tangents3, roughness3;
     public Texture albedo4, normals4, tangents4, roughness4;
+    public Texture albedo5, normals5, tangents5, roughness5;
 
     private class MaterialInfo {
         public int textureSet;
@@ -84,6 +85,7 @@ public class MaterialWizard : MonoBehaviour {
         if (i == 2) return albedo2;
         if (i == 3) return albedo3;
         if (i == 4) return albedo4;
+        if (i == 5) return albedo5;
 
         return albedo1;
     }
@@ -93,6 +95,7 @@ public class MaterialWizard : MonoBehaviour {
         if (i == 2) return normals2;
         if (i == 3) return normals3;
         if (i == 4) return normals4;
+        if (i == 5) return normals5;
 
         return normals1;
     }
@@ -102,6 +105,7 @@ public class MaterialWizard : MonoBehaviour {
         if (i == 2) return tangents2;
         if (i == 3) return tangents3;
         if (i == 4) return tangents4;
+        if (i == 5) return tangents5;
 
         return tangents1;
     }
@@ -111,6 +115,7 @@ public class MaterialWizard : MonoBehaviour {
         if (i == 2) return roughness2;
         if (i == 3) return roughness3;
         if (i == 4) return roughness4;
+        if (i == 5) return roughness5;
 
         return roughness1;
     }
@@ -204,8 +209,11 @@ public class MaterialWizard : MonoBehaviour {
         material.SetTexture("_NormalTex2", GetNormalsTex(materialInfo2.textureSet));
         material.SetTexture("_TangentTex2", GetTangentsTex(materialInfo2.textureSet));
         material.SetTexture("_RoughnessTex2", GetRoughnessTex(materialInfo2.textureSet));
-        RenderSettings.skybox = GetSkyboxMaterial(skyboxDropdown.value);
+
+        Material skyboxMaterial = GetSkyboxMaterial(skyboxDropdown.value);
+        RenderSettings.skybox = skyboxMaterial;
         material.SetTexture("_SkyboxCube", GetSkyboxTex(skyboxDropdown.value));
+        material.SetFloat("_SkyboxIntensity", skyboxIntensitySlider.value);
     }
 
     void OnEnable() {
