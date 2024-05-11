@@ -1,4 +1,5 @@
 ﻿using UnityEngine;
+using UnityEngine.UI;
 
 namespace UnityTemplateProjects
 {
@@ -6,8 +7,11 @@ namespace UnityTemplateProjects
     {
 
         public GameObject uiOverlay;
+        public Toggle bloomToggle, hdrToggle;
 
         private bool uiActive = true;
+        private Bloom bloom;
+        private ToneMapper tonemapper;
 
         class CameraState
         {
@@ -79,6 +83,8 @@ namespace UnityTemplateProjects
         {
             m_TargetCameraState.SetFromTransform(transform);
             m_InterpolatingCameraState.SetFromTransform(transform);
+            tonemapper = GetComponent<ToneMapper>();
+            bloom = GetComponent<Bloom>();
         }
 
         Vector3 GetInputTranslationDirection()
@@ -126,6 +132,9 @@ namespace UnityTemplateProjects
                 uiActive = !uiActive;
                 uiOverlay.SetActive(uiActive);
             }
+
+            bloom.enabled = bloomToggle.isOn;
+            tonemapper.enabled = hdrToggle.isOn;
 
             if (uiActive) return;
 

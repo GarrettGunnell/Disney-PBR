@@ -6,6 +6,7 @@ using TMPro;
 
 public class MaterialWizard : MonoBehaviour {
     public Shader shader;
+    public Toggle hdrToggle;
 
     public TMP_Dropdown materialDropdown, textureSetDropdown, skyboxDropdown;
     // Great code
@@ -13,7 +14,7 @@ public class MaterialWizard : MonoBehaviour {
     specularTintSlider, roughnessSlider, anisotropicSlider, sheenSlider, sheenTintSlider, clearCoatSlider, clearCoatGlossSlider,
     indirectMinStrengthSlider, indirectMaxStrengthSlider, blendSlider, skyboxIntensitySlider;
 
-    public Texture skybox1, skybox2, skybox3, skybox4;
+    public Texture skybox1, skybox2, skybox3;
     public Material skyboxMaterial1, skyboxMaterial2, skyboxMaterial3, skyboxMaterial4;
     public Texture albedo1, normals1, tangents1, roughness1;
     public Texture albedo2, normals2, tangents2, roughness2;
@@ -66,7 +67,6 @@ public class MaterialWizard : MonoBehaviour {
         if (i == 0) return skybox1;
         if (i == 1) return skybox2;
         if (i == 2) return skybox3;
-        if (i == 3) return skybox4;
 
         return skybox1;
     }
@@ -211,6 +211,7 @@ public class MaterialWizard : MonoBehaviour {
         material.SetTexture("_RoughnessTex2", GetRoughnessTex(materialInfo2.textureSet));
 
         Material skyboxMaterial = GetSkyboxMaterial(skyboxDropdown.value);
+        skyboxMaterial.SetFloat("_Exposure", hdrToggle.isOn ? 1.4f : 1.0f);
         RenderSettings.skybox = skyboxMaterial;
         material.SetTexture("_SkyboxCube", GetSkyboxTex(skyboxDropdown.value));
         material.SetFloat("_SkyboxIntensity", skyboxIntensitySlider.value);
