@@ -4,6 +4,11 @@ namespace UnityTemplateProjects
 {
     public class SimpleCameraController : MonoBehaviour
     {
+
+        public GameObject uiOverlay;
+
+        private bool uiActive = true;
+
         class CameraState
         {
             public float yaw;
@@ -116,6 +121,13 @@ namespace UnityTemplateProjects
 				UnityEditor.EditorApplication.isPlaying = false; 
 				#endif
             }
+
+            if (Input.GetKeyDown("space")) {
+                uiActive = !uiActive;
+                uiOverlay.SetActive(uiActive);
+            }
+
+            if (uiActive) return;
 
             // Hide and lock cursor when right mouse button pressed
             if (Input.GetMouseButtonDown(1))
