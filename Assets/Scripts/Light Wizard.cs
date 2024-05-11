@@ -5,7 +5,7 @@ using UnityEngine.UI;
 
 public class LightWizard : MonoBehaviour {
     
-    public Slider redSlider, blueSlider, greenSlider, intensitySlider, verticalSlider, horizontalSlider;
+    public Slider redSlider, greenSlider, blueSlider, intensitySlider, verticalSlider, horizontalSlider;
 
     private Light lightComponent;
     void OnEnable() {

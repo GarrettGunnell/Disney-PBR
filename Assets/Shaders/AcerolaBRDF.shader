@@ -377,33 +377,72 @@ Shader "Acerola/AcerolaBRDF" {
                 N.xy *= _NormalStrength;
                 N.z = sqrt(1.0f - saturate(dot(N.xy, N.xy)));
                 N = mul(N, worldToTangent);
+                if (_TextureSetIndex1 == 0) N = i.normal;
 
                 // Unpack DXT5nm tangent space tangent
                 float3 T;
                 T.xy = tex2D(_TangentTex, uv).wy * 2 - 1;
                 T.z = sqrt(1 - saturate(dot(T.xy, T.xy)));
-
+                
                 T = mul(lerp(float3(1.0f, 0.0f, 0.0f), T, saturate(_NormalStrength)), worldToTangent);
+                if (_TextureSetIndex1 == 0) T = i.tangent.xyz;
                 
                 float3 albedo = tex2D(_AlbedoTex, uv).rgb;
+                if (_TextureSetIndex1 == 0) albedo = 1.0f;
                 albedo *= _BaseColor;
+
+                float roughnessMap = tex2D(_RoughnessTex, uv).r;
+                if (_TextureSetIndex1 == 0) roughnessMap = 0.0f;
+
+                // Unpack DXT5nm tangent space normal
+                float4 packedNormal2 = tex2D(_NormalTex2, uv);
+                packedNormal2.w *= packedNormal2.x;
+
+                float3 N2;
+                N2.xy = packedNormal2.wy * 2.0f - 1.0f;
+                N2.xy *= _NormalStrength;
+                N2.z = sqrt(1.0f - saturate(dot(N2.xy, N2.xy)));
+                N2 = mul(N2, worldToTangent);
+                if (_TextureSetIndex2 == 0) N2 = i.normal;
+
+                // Unpack DXT5nm tangent space tangent
+                float3 T2;
+                T2.xy = tex2D(_TangentTex2, uv).wy * 2 - 1;
+                T2.z = sqrt(1 - saturate(dot(T2.xy, T2.xy)));
+                
+                T2 = mul(lerp(float3(1.0f, 0.0f, 0.0f), T2, saturate(_NormalStrength)), worldToTangent);
+                if (_TextureSetIndex2 == 0) T2 = i.tangent.xyz;
+                
+                float3 albedo2 = tex2D(_AlbedoTex2, uv).rgb;
+                if (_TextureSetIndex2 == 0) albedo2 = 1.0f;
+                albedo2 *= _BaseColor;
+
+                float roughnessMap2 = tex2D(_RoughnessTex2, uv).r;
+                if (_TextureSetIndex2 == 0) roughnessMap2 = 0.0f;
 
                 BRDFInput input;
 
-                input.N = N;
+                float3 finalNormal = normalize(lerp(N, N2, _BlendFactor));
+                float3 finalTangent = normalize(lerp(T, T2, _BlendFactor));
+
+                input.N = finalNormal;
                 input.L = normalize(_WorldSpaceLightPos0.xyz); // Direction *towards* light source
                 input.V = normalize(_WorldSpaceCameraPos.xyz - i.worldPos.xyz); // Direction *towards* camera
-                input.X = normalize(T);
-                input.Y = normalize(cross(N, T) * i.tangent.w);
-                input.roughness = max(_Roughness, tex2D(_RoughnessTex, uv).r);
-                input.baseColor = albedo;
+                input.X = finalTangent;
+                input.Y = (cross(finalNormal, finalTangent) * i.tangent.w); // Bitangent
+                input.roughness = max(_Roughness, lerp(roughnessMap, roughnessMap2, _BlendFactor));
+                input.baseColor = lerp(albedo, albedo2, _BlendFactor);
+
+                // return input.roughness;
 
                 BRDFResults reflection = DisneyBRDF(input);
 
-                float3 output = _LightColor0 * (reflection.diffuse * albedo + reflection.specular + reflection.clearcoat);
+                float3 output = _LightColor0 * (reflection.diffuse + reflection.specular + reflection.clearcoat);
                 output *= DotClamped(input.N, input.L);
-
-                return float4(max(0.0f, output), 1.0f);
+                output *= SHADOW_ATTENUATION(i);
+                output = max(0.0f, output);
+                
+                return float4(output, 1.0f);
             }
 
             ENDCG
