@@ -23,6 +23,7 @@ Shader "Acerola/AcerolaBRDF" {
         _IndirectF90 ("Indirect Max Reflectance", Range(0.0, 1.0)) = 0.0
         [HideInInspector]_TextureSetIndex1 ("Texture Set Index", Range(1, 1)) = 1
         [HideInInspector]_BlendFactor ("_", Range(1, 1)) = 0
+        [HideInInspector]_SkyboxIntensity ("_", Range(1, 1)) = 1
     }
 
     SubShader {
