@@ -19,7 +19,7 @@ MonoBehaviour:
     width: 1920
     height: 997
   m_ShowMode: 4
-  m_Title: Hierarchy
+  m_Title: Game
   m_RootView: {fileID: 11}
   m_MinSize: {x: 875, y: 300}
   m_MaxSize: {x: 10000, y: 10000}
@@ -41,7 +41,7 @@ MonoBehaviour:
     x: 1962
     y: 71
     width: 318
-    height: 504
+    height: 763
   m_ShowMode: 0
   m_Title: Inspector
   m_RootView: {fileID: 6}
@@ -114,7 +114,7 @@ MonoBehaviour:
     x: 0
     y: 0
     width: 318
-    height: 504
+    height: 763
   m_MinSize: {x: 275, y: 121}
   m_MaxSize: {x: 4000, y: 4021}
   m_ActualView: {fileID: 16}
@@ -141,11 +141,11 @@ MonoBehaviour:
     x: 0
     y: 0
     width: 318
-    height: 504
+    height: 763
   m_MinSize: {x: 275, y: 121}
   m_MaxSize: {x: 4000, y: 4021}
   vertical: 0
-  controlID: 1510
+  controlID: 14441
 --- !u!114 &7
 MonoBehaviour:
   m_ObjectHideFlags: 52
@@ -195,7 +195,7 @@ MonoBehaviour:
   m_MinSize: {x: 100, y: 121}
   m_MaxSize: {x: 4000, y: 4021}
   vertical: 0
-  controlID: 739
+  controlID: 14523
 --- !u!114 &9
 MonoBehaviour:
   m_ObjectHideFlags: 52
@@ -245,7 +245,7 @@ MonoBehaviour:
   m_MinSize: {x: 230, y: 271}
   m_MaxSize: {x: 10000, y: 10021}
   vertical: 0
-  controlID: 546
+  controlID: 14542
 --- !u!114 &11
 MonoBehaviour:
   m_ObjectHideFlags: 52
@@ -319,7 +319,7 @@ MonoBehaviour:
   m_MinSize: {x: 100, y: 50}
   m_MaxSize: {x: 8096, y: 8096}
   vertical: 0
-  controlID: 495
+  controlID: 14584
 --- !u!114 &14
 MonoBehaviour:
   m_ObjectHideFlags: 52
@@ -389,10 +389,10 @@ MonoBehaviour:
     m_TextWithWhitespace: "Inspector\u200B"
   m_Pos:
     serializedVersion: 2
-    x: 0
-    y: 21
+    x: 1962
+    y: 71
     width: 318
-    height: 483
+    height: 742
   m_SerializedDataModeController:
     m_DataMode: 0
     m_PreferredDataMode: 0
@@ -438,8 +438,8 @@ MonoBehaviour:
     m_TextWithWhitespace: "Hierarchy\u200B"
   m_Pos:
     serializedVersion: 2
-    x: 0
-    y: 21
+    x: 2426
+    y: 248
     width: 321
     height: 546
   m_SerializedDataModeController:
@@ -456,9 +456,9 @@ MonoBehaviour:
   m_SceneHierarchy:
     m_TreeViewState:
       scrollPos: {x: 0, y: 0}
-      m_SelectedIDs: 008a0000
+      m_SelectedIDs: 84780000
       m_LastClickedID: 0
-      m_ExpandedIDs: a8d6ffffded6ffff02d8ffffdcdaffff28dbffff48dcffff3cfbffff
+      m_ExpandedIDs: c6a9feffa8d6ffffded6ffff02d8ffffdcdaffff28dbffff48dcffff3cfbffff
       m_RenameOverlay:
         m_UserAcceptedRename: 0
         m_Name: 
@@ -504,8 +504,8 @@ MonoBehaviour:
     m_TextWithWhitespace: "Project\u200B"
   m_Pos:
     serializedVersion: 2
-    x: 0
-    y: 21
+    x: 2078
+    y: 220
     width: 321
     height: 552
   m_SerializedDataModeController:
@@ -530,7 +530,7 @@ MonoBehaviour:
     m_SkipHidden: 0
     m_SearchArea: 1
     m_Folders:
-    - Assets/Materials
+    - Assets/Materials/Mud
     m_Globs: []
     m_ProductIds: 
     m_AnyWithAssetOrigin: 0
@@ -540,16 +540,16 @@ MonoBehaviour:
   m_ViewMode: 1
   m_StartGridSize: 16
   m_LastFolders:
-  - Assets/Materials
+  - Assets/Materials/Mud
   m_LastFoldersGridSize: -1
-  m_LastProjectPath: C:\Users\Fatal\Documents\Unity\Elden Ring Stars
+  m_LastProjectPath: C:\Users\Fatal\Documents\Unity\Disney PBR
   m_LockTracker:
     m_IsLocked: 0
   m_FolderTreeState:
     scrollPos: {x: 0, y: 0}
-    m_SelectedIDs: ca580000
-    m_LastClickedID: 22730
-    m_ExpandedIDs: 00000000187900001e79000000ca9a3b
+    m_SelectedIDs: 8a790000
+    m_LastClickedID: 31114
+    m_ExpandedIDs: 00000000187900001a7900001e79000000ca9a3b
     m_RenameOverlay:
       m_UserAcceptedRename: 0
       m_Name: 
@@ -610,21 +610,21 @@ MonoBehaviour:
     m_ExpandedInstanceIDs: 
     m_RenameOverlay:
       m_UserAcceptedRename: 0
-      m_Name: 
-      m_OriginalName: 
+      m_Name: Materials
+      m_OriginalName: Materials
       m_EditFieldRect:
         serializedVersion: 2
         x: 0
         y: 0
         width: 0
         height: 0
-      m_UserData: 0
+      m_UserData: 31002
       m_IsWaitingForDelay: 0
       m_IsRenaming: 0
-      m_OriginalEventType: 11
+      m_OriginalEventType: 0
       m_IsRenamingFilename: 1
       m_TrimLeadingAndTrailingWhitespace: 0
-      m_ClientGUIView: {fileID: 0}
+      m_ClientGUIView: {fileID: 9}
     m_CreateAssetUtility:
       m_EndAction: {fileID: 0}
       m_InstanceID: 0
@@ -658,7 +658,7 @@ MonoBehaviour:
   m_Pos:
     serializedVersion: 2
     x: 0
-    y: 19
+    y: 73
     width: 1920
     height: 926
   m_SerializedDataModeController:
@@ -703,7 +703,7 @@ MonoBehaviour:
     m_VAllowExceedBaseRangeMax: 1
     m_ScaleWithWindow: 0
     m_HSlider: 0
-    m_VSlider: 0
+    m_VSlider: 1
     m_IgnoreScrollWheelUntilClicked: 0
     m_EnableMouseInput: 1
     m_EnableSliderZoomHorizontal: 0
@@ -716,7 +716,7 @@ MonoBehaviour:
       y: 21
       width: 1920
       height: 905
-    m_Scale: {x: 0.837963, y: 0.837963}
+    m_Scale: {x: 1, y: 1}
     m_Translation: {x: 960, y: 452.5}
     m_MarginLeft: 0
     m_MarginRight: 0
@@ -724,10 +724,10 @@ MonoBehaviour:
     m_MarginBottom: 0
     m_LastShownAreaInsideMargins:
       serializedVersion: 2
-      x: -1145.6354
-      y: -540
-      width: 2291.2708
-      height: 1080
+      x: -960
+      y: -452.5
+      width: 1920
+      height: 905
     m_MinimalGUI: 1
   m_defaultScale: 0.837963
   m_LastWindowPixelSize: {x: 1920, y: 926}

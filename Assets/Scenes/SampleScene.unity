@@ -330,7 +330,7 @@ Transform:
   m_GameObject: {fileID: 963194225}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: -2.78}
+  m_LocalPosition: {x: 0, y: 0, z: -2.64}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -484,7 +484,7 @@ PrefabInstance:
     - target: {fileID: -7511558181221131132, guid: e0cde87d4afd90e4db42bfeb622202c4, type: 3}
       propertyPath: 'm_Materials.Array.data[0]'
       value: 
-      objectReference: {fileID: 2100000, guid: 9f7c3fa830a83ce42ba5239badd698e2, type: 2}
+      objectReference: {fileID: 2100000, guid: 518e580c8df25ee41b7704094c0c9a11, type: 2}
     - target: {fileID: 919132149155446097, guid: e0cde87d4afd90e4db42bfeb622202c4, type: 3}
       propertyPath: m_Name
       value: sphere
