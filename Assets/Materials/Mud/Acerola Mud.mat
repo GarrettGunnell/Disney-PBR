@@ -19,7 +19,7 @@ Material:
   m_CustomRenderQueue: -1
   stringTagMap: {}
   disabledShaderPasses: []
-  m_LockedProperties: 
+  m_LockedProperties: _ClearCoat
   m_SavedProperties:
     serializedVersion: 3
     m_TexEnvs:
@@ -68,51 +68,54 @@ Material:
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _RoughnessTex:
-        m_Texture: {fileID: 2800000, guid: 112b65a9aa1fd634fb163c8382d067df, type: 3}
+        m_Texture: {fileID: 2800000, guid: 0e7b18c2456cb3d4ea74a041777a3a8a, type: 3}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _SkyboxCube:
-        m_Texture: {fileID: 8900000, guid: e71fc492f440446b99875b8e1df890ba, type: 3}
+        m_Texture: {fileID: 8900000, guid: 6fa3f446deee84c52aec507bd0aca28c, type: 3}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _TangentTex:
-        m_Texture: {fileID: 2800000, guid: 0f26dbb00f2b4b149be77118f62dfab9, type: 3}
+        m_Texture: {fileID: 2800000, guid: 3faedf3ff2f61364eb84d1a03a40568a, type: 3}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     m_Ints: []
     m_Floats:
-    - _Anisotropic: 1
+    - _Anisotropic: 0.462
+    - _BlendFactor: 0
     - _BumpScale: 1
     - _ClearCoat: 1
-    - _ClearCoatGloss: 0.727
+    - _ClearCoatGloss: 1
     - _Cutoff: 0.5
     - _DetailNormalMapScale: 1
     - _DstBlend: 0
     - _GlossMapScale: 1
     - _Glossiness: 0.5
     - _GlossyReflections: 1
-    - _IndirectF0: 0.032
+    - _IndirectF0: 0
     - _IndirectF90: 1
     - _Metallic: 0
     - _Mode: 0
     - _NormalStrength: 0.65
     - _OcclusionStrength: 1
     - _Parallax: 0.02
-    - _Roughness: 0.078
+    - _Roughness: 0.343
     - _RoughnessMapMod: 1
-    - _Sheen: 0
-    - _SheenTint: 1
+    - _Sheen: 0.195
+    - _SheenTint: 0.361
+    - _SkyboxIntensity: 1
     - _SmoothnessTextureChannel: 0
-    - _Specular: 0.45
+    - _Specular: 0.41
     - _SpecularHighlights: 1
     - _SpecularTint: 0
     - _SrcBlend: 1
     - _Subsurface: 0
     - _TextureSetIndex: 1
+    - _TextureSetIndex1: 1
     - _UVSec: 0
     - _ZWrite: 1
     m_Colors:
-    - _BaseColor: {r: 1, g: 0.9685404, b: 0.8349056, a: 1}
+    - _BaseColor: {r: 1, g: 1, b: 1, a: 1}
     - _Color: {r: 1, g: 1, b: 1, a: 1}
     - _EmissionColor: {r: 0, g: 0, b: 0, a: 1}
   m_BuildTextureStacks: []

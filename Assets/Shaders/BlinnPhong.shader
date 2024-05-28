@@ -2,11 +2,11 @@ Shader "Acerola/BlinnPhong" {
 
     Properties {
         _AlbedoTex ("Albedo", 2D) = "" {}
+        _BaseColor("Base Color", Color) = (1, 1, 1, 1)
         _NormalTex ("Normal", 2D) = "" {}
         _NormalStrength ("Normal Strength", Range(0.0, 3.0)) = 1.0
-        _DirectSpecularPeak ("Specular Peak", Range(0.001, 2000.0)) = 20.0
+        _DirectSpecularPeak ("Specular Peak", Range(1.0, 100.0)) = 20.0
         _SpecularStrength ("Specular Strength", Range(0.0, 2.0)) = 1.0
-        _F0 ("Direct Fresnel", Range(0.0, 2.0)) = 0.028
     }
 
     SubShader {
@@ -19,15 +19,9 @@ Shader "Acerola/BlinnPhong" {
         #define PI 3.14159265f
 
 
-        float SchlickFresnel(float x) {
-            x = saturate(1.0f - x);
-            float x2 = x * x;
-
-            return x2 * x2 * x; // While this is equivalent to pow(1 - x, 5) it is two less mult instructions
-        }
-
+        float3 _BaseColor;
         sampler2D _AlbedoTex, _NormalTex;
-        float _NormalStrength, _DirectSpecularPeak, _IndirectSpecularPeak, _SpecularStrength, _IndirectSpecularStrength, _F0, _F1;
+        float _NormalStrength, _DirectSpecularPeak, _IndirectSpecularPeak, _SpecularStrength, _IndirectSpecularStrength;
 
         struct VertexData {
             float4 vertex : POSITION;
@@ -56,17 +50,14 @@ Shader "Acerola/BlinnPhong" {
             output.diffuse = 0.0f;
             output.specular = 0.0f;
 
+            // Blinn Phong
             float3 H = normalize(L + V);
-            float3 R = reflect(-V, N);
-
-            float ndotl = DotClamped(N, L);
-
-            float F = lerp(_F0, 1.0f, SchlickFresnel(DotClamped(L, H)));
-
             float spec = pow(DotClamped(N, H), _DirectSpecularPeak);
-            spec *= F;
+            // Phong
+            // float3 R = reflect(-L, N);
+            // spec = pow(DotClamped(R, V), _DirectSpecularPeak);
 
-            output.diffuse = 1 - F;
+            output.diffuse = 1.0f;
             output.specular = saturate(spec * _SpecularStrength);
 
             return output;
@@ -103,7 +94,7 @@ Shader "Acerola/BlinnPhong" {
 
             float4 fp(v2f i) : SV_TARGET {
                 float2 uv = i.uv;
-                float3 albedo = tex2D(_AlbedoTex, uv).rgb;
+                float3 albedo = tex2D(_AlbedoTex, uv).rgb * _BaseColor;
                 
                 // Unpack DXT5nm tangent space normal
                 float3 N;
@@ -117,7 +108,7 @@ Shader "Acerola/BlinnPhong" {
                 float shadow = SHADOW_ATTENUATION(i);
 
                 float3 L = _WorldSpaceLightPos0.xyz;
-                float3 V = normalize(_WorldSpaceCameraPos - i.worldPos);
+                float3 V = normalize(_WorldSpaceCameraPos.xyz - i.worldPos.xyz);
 
                 BRDFResults reflection = BlinnPhongBRDF(L, V, N);
 
@@ -162,7 +153,7 @@ Shader "Acerola/BlinnPhong" {
 
             float4 fp(v2f i) : SV_TARGET {
                 float2 uv = i.uv;
-                float3 albedo = tex2D(_AlbedoTex, uv).rgb;
+                float3 albedo = tex2D(_AlbedoTex, uv).rgb * _BaseColor;
                 
                 // Unpack DXT5nm tangent space normal
                 float3 N;

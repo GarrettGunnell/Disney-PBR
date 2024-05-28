@@ -2,6 +2,7 @@ Shader "Acerola/LambertianDiffuse" {
 
     Properties {
         _AlbedoTex ("Albedo", 2D) = "" {}
+        _BaseColor("Base Color", Color) = (1, 1, 1, 1)
         _NormalTex ("Normal", 2D) = "" {}
         _NormalStrength ("Normal Strength", Range(0.0, 3.0)) = 1.0
         _SkyboxCube ("Skybox", Cube) = "" {}
@@ -14,6 +15,7 @@ Shader "Acerola/LambertianDiffuse" {
         #include "UnityPBSLighting.cginc"
         #include "AutoLight.cginc"
 
+        float3 _BaseColor;
         samplerCUBE _SkyboxCube;
         sampler2D _AlbedoTex, _NormalTex;
         float _NormalStrength;
@@ -78,7 +80,7 @@ Shader "Acerola/LambertianDiffuse" {
 
                 float shadow = SHADOW_ATTENUATION(i);
 
-                float3 directDiffuse = _LightColor0 * albedo * ndotl * shadow;
+                float3 directDiffuse = _LightColor0 * _BaseColor * albedo * ndotl * shadow;
 
                 float3 indirectLight = texCUBElod(_SkyboxCube, float4(normal, 5)).rgb;
                 float3 indirectDiffuse = albedo * indirectLight;
@@ -117,7 +119,7 @@ Shader "Acerola/LambertianDiffuse" {
 
             float4 fp(v2f i) : SV_TARGET {
                 float2 uv = i.uv;
-                float3 col = tex2D(_AlbedoTex, uv).rgb;
+                float3 albedo = tex2D(_AlbedoTex, uv).rgb;
                 
                 // Unpack DXT5nm tangent space normal
                 float3 normal;
@@ -130,7 +132,14 @@ Shader "Acerola/LambertianDiffuse" {
 
                 float ndotl = DotClamped(_WorldSpaceLightPos0.xyz, normal);
 
-                return float4(_LightColor0 * col * ndotl, 1.0f);
+                float shadow = SHADOW_ATTENUATION(i);
+
+                float3 directDiffuse = _LightColor0 * _BaseColor * albedo * ndotl * shadow;
+
+                float3 indirectLight = texCUBElod(_SkyboxCube, float4(normal, 5)).rgb;
+                float3 indirectDiffuse = albedo * indirectLight;
+
+                return float4(directDiffuse + indirectDiffuse, 1.0f);
             }
 
             ENDCG

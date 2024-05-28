@@ -67,14 +67,6 @@ Material:
         m_Texture: {fileID: 0}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
-    - _RoughnessTex:
-        m_Texture: {fileID: 2800000, guid: 6429a14e6f9dc1748b5335a1b5f36b44, type: 3}
-        m_Scale: {x: 1, y: 1}
-        m_Offset: {x: 0, y: 0}
-    - _ShininessTex:
-        m_Texture: {fileID: 2800000, guid: 6429a14e6f9dc1748b5335a1b5f36b44, type: 3}
-        m_Scale: {x: 1, y: 1}
-        m_Offset: {x: 0, y: 0}
     - _SkyboxCube:
         m_Texture: {fileID: 8900000, guid: c8f21f62fdb3e43c5b32917c84683698, type: 3}
         m_Scale: {x: 1, y: 1}
@@ -84,28 +76,25 @@ Material:
     - _BumpScale: 1
     - _Cutoff: 0.5
     - _DetailNormalMapScale: 1
-    - _DirectSpecularPeak: 732
+    - _DirectSpecularPeak: 45.6
     - _DstBlend: 0
-    - _F0: 0.2
-    - _F1: 0
     - _GlossMapScale: 1
     - _Glossiness: 0.5
     - _GlossyReflections: 1
-    - _IndirectSpecularPeak: 7.9
-    - _IndirectSpecularStrength: 1
     - _Metallic: 0
     - _Mode: 0
-    - _NormalStrength: 1
+    - _NormalStrength: 0.62
     - _OcclusionStrength: 1
     - _Parallax: 0.02
-    - _ShininessStrength: 53.5
     - _SmoothnessTextureChannel: 0
     - _SpecularHighlights: 1
-    - _SpecularStrength: 0.33
+    - _SpecularStrength: 0.62
     - _SrcBlend: 1
     - _UVSec: 0
     - _ZWrite: 1
     m_Colors:
+    - _Albedo: {r: 1, g: 1, b: 1, a: 1}
+    - _BaseColor: {r: 1, g: 1, b: 1, a: 1}
     - _Color: {r: 1, g: 1, b: 1, a: 1}
     - _EmissionColor: {r: 0, g: 0, b: 0, a: 1}
   m_BuildTextureStacks: []

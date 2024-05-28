@@ -94,7 +94,7 @@ Shader "Acerola/DisneyBRDF" {
             float3 clearcoat;
         };
 
-        BRDFResults DisneyBRDF(float3 L, float3 V, float3 N, float3 X, float3 Y) {
+        BRDFResults DisneyBRDF(float3 baseColor, float3 L, float3 V, float3 N, float3 X, float3 Y) {
             BRDFResults output;
             output.diffuse = 0.0f;
             output.specular = 0.0f;
@@ -107,10 +107,12 @@ Shader "Acerola/DisneyBRDF" {
             float ndoth = DotClamped(N, H);
             float ldoth = DotClamped(L, H);
 
-            float Cdlum = luminance(_BaseColor);
+            float3 surfaceColor = baseColor * _BaseColor;
 
-            float3 Ctint = Cdlum > 0.0f ? _BaseColor / Cdlum : 1.0f;
-            float3 Cspec0 = lerp(_Specular * 0.08f * lerp(1.0f, Ctint, _SpecularTint), _BaseColor, _Metallic);
+            float Cdlum = luminance(surfaceColor);
+
+            float3 Ctint = Cdlum > 0.0f ? surfaceColor / Cdlum : 1.0f;
+            float3 Cspec0 = lerp(_Specular * 0.08f * lerp(1.0f, Ctint, _SpecularTint), surfaceColor, _Metallic);
             float3 Csheen = lerp(1.0f, Ctint, _SheenTint);
 
 
@@ -158,7 +160,7 @@ Shader "Acerola/DisneyBRDF" {
             float Gr = SmithGGX(ndotl, ndotv, 0.25f);
 
             
-            output.diffuse = (1.0f / PI) * (lerp(Fd, ss, _Subsurface) + Fsheen) * (1 - _Metallic);
+            output.diffuse = (1.0f / PI) * (lerp(Fd, ss, _Subsurface) * surfaceColor + Fsheen) * (1 - _Metallic);
             output.specular = Ds * F * G;
             output.clearcoat = 0.25f * _ClearCoat * Gr * Fr * Dr;
 
@@ -229,9 +231,9 @@ Shader "Acerola/DisneyBRDF" {
                 float3 X = normalize(T);
                 float3 Y = normalize(cross(N, T) * i.tangent.w);
 
-                BRDFResults reflection = DisneyBRDF(L, V, N, X, Y);
+                BRDFResults reflection = DisneyBRDF(albedo, L, V, N, X, Y);
 
-                float3 output = _LightColor0 * (reflection.diffuse * albedo + reflection.specular + reflection.clearcoat);
+                float3 output = _LightColor0 * (reflection.diffuse + reflection.specular + reflection.clearcoat);
                 output *= DotClamped(N, L);
                 output *= SHADOW_ATTENUATION(i);
 
@@ -305,9 +307,9 @@ Shader "Acerola/DisneyBRDF" {
                 float3 X = normalize(T);
                 float3 Y = normalize(cross(N, T) * i.tangent.w);
 
-                BRDFResults reflection = DisneyBRDF(L, V, N, X, Y);
+                BRDFResults reflection = DisneyBRDF(albedo, L, V, N, X, Y);
 
-                float3 output = _LightColor0 * (reflection.diffuse * albedo + reflection.specular + reflection.clearcoat);
+                float3 output = _LightColor0 * (reflection.diffuse + reflection.specular + reflection.clearcoat);
                 output *= DotClamped(N, L);
                 output *= SHADOW_ATTENUATION(i);
 

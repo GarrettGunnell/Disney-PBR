@@ -184,7 +184,6 @@ Shader "Acerola/AcerolaBRDF" {
             
             output.diffuse = (1.0f / PI) * (lerp(Fd, ss, _Subsurface) * i.baseColor + Fsheen) * (1 - _Metallic) * (1 - F);
             output.specular = saturate(Ds * F * G);
-            // output.specular = F;
             output.clearcoat = saturate(0.25f * _ClearCoat * Gr * Fr * Dr);
 
             return output;
@@ -294,8 +293,6 @@ Shader "Acerola/AcerolaBRDF" {
                 input.Y = (cross(finalNormal, finalTangent) * i.tangent.w); // Bitangent
                 input.roughness = max(_Roughness, lerp(roughnessMap, roughnessMap2, _BlendFactor));
                 input.baseColor = lerp(albedo, albedo2, _BlendFactor);
-
-                // return input.roughness;
 
                 BRDFResults reflection = DisneyBRDF(input);
 
@@ -433,15 +430,13 @@ Shader "Acerola/AcerolaBRDF" {
                 input.roughness = max(_Roughness, lerp(roughnessMap, roughnessMap2, _BlendFactor));
                 input.baseColor = lerp(albedo, albedo2, _BlendFactor);
 
-                // return input.roughness;
-
                 BRDFResults reflection = DisneyBRDF(input);
 
                 float3 output = _LightColor0 * (reflection.diffuse + reflection.specular + reflection.clearcoat);
                 output *= DotClamped(input.N, input.L);
                 output *= SHADOW_ATTENUATION(i);
                 output = max(0.0f, output);
-                
+
                 return float4(output, 1.0f);
             }
 
